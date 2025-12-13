@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graninha Bot - 100% Legit</title>
+    <link rel="stylesheet" href="graninha-bot-style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎮 Graninha Bot</h1>
+            <p class="subtitle">Automação 100% Legit com Simulação de Vídeos</p>
+        </header>
+
+        <div class="config-section" id="configSection">
+            <h2>⚙️ Configuração</h2>
+            <form id="configForm">
+                <div class="form-group">
+                    <label for="bearerToken">Bearer Token:</label>
+                    <input 
+                        type="text" 
+                        id="bearerToken" 
+                        placeholder="519800|YIxuAVV3BzcWqjkolsoo31MtlDquv2EUBeiTC82K"
+                        required
+                    >
+                    <small>Obtenha usando HTTP Catcher no app Graninha</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="exId">EX ID:</label>
+                    <input 
+                        type="text" 
+                        id="exId" 
+                        placeholder="114739186742449509260"
+                        required
+                    >
+                    <small>ID do usuário encontrado nas requisições</small>
+                </div>
+
+                <!-- Secret Key oculto (valor padrão) -->
+                <input type="hidden" id="secretKey" value="0NtCe2obYa13c3Bc1UEbVVj4p8IEDW">
+
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="autoLoop" checked>
+                        Ativar loop infinito (intervalo realista de 5-15 minutos)
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    🚀 Iniciar Bot
+                </button>
+            </form>
+        </div>
+
+        <div class="status-section" id="statusSection" style="display: none;">
+            <div class="status-header">
+                <h2>📊 Status</h2>
+                <button class="btn btn-secondary" id="stopBtn">⏹️ Parar</button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Saldo Inicial</div>
+                    <div class="stat-value" id="saldoInicial">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Saldo Atual</div>
+                    <div class="stat-value" id="saldoAtual">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Ganho Total</div>
+                    <div class="stat-value success" id="ganhoTotal">+0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Ações Executadas</div>
+                    <div class="stat-value" id="acoesExecutadas">0</div>
+                </div>
+            </div>
+
+            <div class="progress-section">
+                <h3>Progresso</h3>
+                <div class="progress-item">
+                    <span>Raspadinhas</span>
+                    <span id="progressRaspadinha">-</span>
+                </div>
+                <div class="progress-item">
+                    <span>Roleta</span>
+                    <span id="progressRoleta">-</span>
+                </div>
+                <div class="progress-item">
+                    <span>Quiz</span>
+                    <span id="progressQuiz">-</span>
+                </div>
+                <div class="progress-item">
+                    <span>Jogos (33 IDs)</span>
+                    <span id="progressJogos">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="logs-section">
+            <div class="logs-header">
+                <h2>📝 Logs</h2>
+                <button class="btn btn-small" id="clearLogsBtn">Limpar</button>
+            </div>
+            <div class="logs-container" id="logsContainer">
+                <div class="log-entry info">
+                    <span class="log-time">--:--:--</span>
+                    <span class="log-message">Aguardando configuração...</span>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>⚠️ Use por sua conta e risco. Este bot automatiza ações no app Graninha.</p>
+            <p>Versão 3.1 - 100% Legit - Valores Aleatórios Corrigidos - CORS Fix</p>
+        </footer>
+    </div>
+
+    <script src="graninha-bot-script.js"></script>
+</body>
+</html>

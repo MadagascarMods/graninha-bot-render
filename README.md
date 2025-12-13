@@ -1,58 +1,76 @@
-# Graninha Bot Render - Hospedagem no Render.com
+# Graninha Bot Render - Sistema Completo com Missões Diárias
 
 ## 📦 Estrutura do Projeto
 
-Este projeto combina a interface do **Graninha Bot v3.1** com a infraestrutura de deployment do **Young Money Tasks** para hospedar no Render.com.
+Este projeto combina **painel de login e missões diárias** (inspirado no Young Money) com o **Graninha Bot v3.1**, criando um sistema completo de automação hospedado no Render.com.
 
 ### Arquivos Principais
 
 ```
 graninha-bot-render/
 ├── server/
-│   └── index.js              # Backend Express com proxy para API Graninha
+│   └── index.js                  # Backend Express com proxy para API Graninha
 ├── public/
-│   ├── index.html            # Interface do bot
-│   ├── style.css             # Estilos
-│   ├── script_optimized.js   # Script otimizado do bot
-│   └── assets/               # Recursos estáticos
-├── package.json              # Dependências Node.js
-├── render.yaml               # Configuração de deployment Render
-└── README.md                 # Este arquivo
+│   ├── index.html                # Painel principal com login e missões
+│   ├── graninha-bot.html         # Bot de automação Graninha
+│   ├── graninha-bot-style.css    # Estilos do bot
+│   ├── graninha-bot-script.js    # Script do bot (adaptado para backend proxy)
+│   ├── session-security.js       # Segurança de sessão
+│   └── assets/                   # Recursos React compilados
+│       ├── index-Bt8lmjj0.js     # JavaScript principal (adaptado)
+│       └── index-C85mVqpZ.css    # CSS principal (adaptado)
+├── package.json                  # Dependências Node.js
+├── render.yaml                   # Configuração de deployment Render
+└── README.md                     # Este arquivo
 ```
+
+## 🎯 Funcionalidades
+
+### 1. Painel de Missões Diárias (index.html)
+
+- **Login de usuário** com autenticação
+- **Missões diárias** com sistema de recompensas
+- **Assistir anúncios** para ganhar pontos
+- **Dashboard** com estatísticas e progresso
+- **Interface React** moderna e responsiva
+- **Redirecionamento automático** para o bot após completar missões
+
+### 2. Bot de Automação Graninha (graninha-bot.html)
+
+- **Automação 100% legit** com simulação de vídeos
+- **Raspadinhas, Roleta, Quiz e 33 Jogos**
+- **Loop infinito** com intervalos realistas (5-15 minutos)
+- **Logs em tempo real** de todas as ações
+- **Estatísticas detalhadas** (saldo, ganhos, ações)
+- **Integração com backend** (sem CORS proxy externo)
+
+### 3. Backend Express (server/index.js)
+
+- **Proxy genérico** para API Graninha
+- **Aceita qualquer endpoint** dinamicamente
+- **Headers corretos** para autenticação
+- **Logs detalhados** de todas as requisições
+- **Tratamento de erros** robusto
 
 ## 🚀 Como Fazer Deploy no Render.com
 
 ### Pré-requisitos
 
-- Conta no GitHub com repositório criado
+- Conta no GitHub (repositório já criado)
 - Conta no Render.com (https://render.com)
-- Git instalado localmente
 
-### Passo 1: Preparar o Repositório GitHub
+### Passo 1: Acessar Render
 
-1. Crie um novo repositório no GitHub (ex: `graninha-bot-render`)
-2. Clone o repositório localmente:
-   ```bash
-   git clone https://github.com/seu-usuario/graninha-bot-render.git
-   cd graninha-bot-render
-   ```
+1. Acesse: **https://dashboard.render.com**
+2. Faça login com sua conta
 
-3. Copie todos os arquivos do projeto para a pasta
-4. Faça o commit e push:
-   ```bash
-   git add .
-   git commit -m "Initial commit: Graninha Bot Render"
-   git push origin main
-   ```
+### Passo 2: Criar Web Service
 
-### Passo 2: Conectar ao Render.com
+1. Clique em **"New +"** → **"Web Service"**
+2. Procure por **"graninha-bot-render"**
+3. Clique em **"Connect"**
 
-1. Acesse [https://dashboard.render.com](https://dashboard.render.com)
-2. Clique em **"New +"** → **"Web Service"**
-3. Selecione **"Deploy an existing repository from GitHub"**
-4. Conecte sua conta GitHub (se não estiver conectada)
-5. Selecione o repositório `graninha-bot-render`
-6. Configure as seguintes opções:
+### Passo 3: Configurar
 
 | Campo | Valor |
 |-------|-------|
@@ -60,11 +78,11 @@ graninha-bot-render/
 | **Environment** | `Node` |
 | **Build Command** | `npm install` |
 | **Start Command** | `npm start` |
-| **Plan** | `Free` (ou pago, conforme necessário) |
+| **Plan** | `Free` |
 
-### Passo 3: Configurar Variáveis de Ambiente
+### Passo 4: Variáveis de Ambiente
 
-No Render Dashboard, vá para **Environment** e adicione as seguintes variáveis:
+Adicione estas variáveis:
 
 ```
 NODE_ENV = production
@@ -73,167 +91,226 @@ CORS_ORIGIN = *
 GRANINHA_API_URL = https://painel.graninha.com.br/api/v1
 ```
 
-### Passo 4: Deploy
+### Passo 5: Deploy
 
 1. Clique em **"Create Web Service"**
-2. O Render iniciará o build automaticamente
-3. Aguarde a conclusão (geralmente 2-5 minutos)
-4. Acesse a URL gerada (ex: `https://graninha-bot-render.onrender.com`)
+2. Aguarde 3-5 minutos
+3. Acesse a URL gerada
 
-## 🔄 Atualizações Automáticas
+## 🌐 Como Usar
 
-Após o deployment inicial, qualquer push para o repositório GitHub acionará um novo build automaticamente no Render.
+### Acessar o Painel Principal
 
-```bash
-# Para atualizar o projeto
-git add .
-git commit -m "Update: descrição das mudanças"
-git push origin main
+```
+https://sua-url.onrender.com
 ```
 
-## 📝 Variáveis de Ambiente
+Você verá o painel de missões diárias com:
 
-### NODE_ENV
-- **Produção**: `production`
-- **Desenvolvimento**: `development`
+1. **Tela de Login** - Faça login com seu e-mail
+2. **Dashboard** - Veja suas estatísticas e missões
+3. **Missões Diárias** - Complete tarefas e assista anúncios
+4. **Botão "Graninha Bot"** - Acesse o bot de automação
 
-### PORT
-- Porta padrão: `3000`
-- Render atribui automaticamente
+### Acessar o Bot Diretamente
 
-### CORS_ORIGIN
-- Permite requisições de qualquer origem: `*`
-- Para restringir: `https://seu-dominio.com`
+```
+https://sua-url.onrender.com/graninha-bot.html
+```
 
-### GRANINHA_API_URL
-- URL da API Graninha: `https://painel.graninha.com.br/api/v1`
-- Pode ser alterada se necessário
+Você verá a interface do bot com:
 
-## 🤖 Endpoints Disponíveis
+1. **Configuração** - Insira Bearer Token e EX ID
+2. **Status** - Acompanhe saldo e ganhos
+3. **Logs** - Veja todas as ações em tempo real
+4. **Loop Infinito** - Ative para execução contínua
 
-O servidor proxy fornece os seguintes endpoints:
+## 🔄 Fluxo de Uso Completo
+
+### 1. Usuário Acessa o Painel
+
+```
+https://sua-url.onrender.com
+```
+
+### 2. Faz Login
+
+- Insere e-mail
+- Sistema autentica
+
+### 3. Vê Missões Diárias
+
+- Missões disponíveis
+- Progresso atual
+- Recompensas
+
+### 4. Assiste Anúncios
+
+- Clica em "Assistir Anúncio"
+- Aguarda tempo do anúncio
+- Recebe recompensa
+
+### 5. Acessa o Bot
+
+- Clica em "Graninha Bot" ou botão similar
+- É redirecionado para `/graninha-bot.html`
+
+### 6. Configura o Bot
+
+- Insere **Bearer Token** (via HTTP Catcher)
+- Insere **EX ID**
+- Ativa **Loop Infinito** (opcional)
+
+### 7. Inicia Automação
+
+- Bot começa a jogar automaticamente
+- Raspadinhas, Roleta, Quiz, Jogos
+- Logs em tempo real
+- Saldo atualizado
+
+## 🤖 Endpoints da API
+
+O backend fornece um endpoint genérico que aceita qualquer requisição:
+
+### POST /api/:endpoint
+
+Proxy genérico para API Graninha.
+
+**Parâmetros:**
+
+```json
+{
+  "bearer_token": "seu_token_aqui",
+  "ex_id": "seu_ex_id",
+  "data": "payload_criptografado"
+}
+```
+
+**Exemplos de endpoints:**
+
+- `/api/user` - Obtém informações do usuário
+- `/api/datas` - Verifica limites
+- `/api/scratch` - Joga raspadinha
+- `/api/roulette` - Joga roleta
+- `/api/quiz` - Responde quiz
+- `/api/game` - Joga um dos 33 jogos
 
 ### GET /health
+
 Verifica o status do servidor.
 
 ```bash
-curl https://graninha-bot-render.onrender.com/health
+curl https://sua-url.onrender.com/health
 ```
 
-### POST /api/get_user
-Obtém informações do usuário.
+## 📝 Diferenças vs Versão Anterior
 
-```bash
-curl -X POST https://graninha-bot-render.onrender.com/api/get_user \
-  -H "Content-Type: application/json" \
-  -d '{"bearer_token": "seu_token"}'
-```
+| Aspecto | Versão Anterior | Versão Atual |
+|---------|----------------|--------------|
+| **Painel de Missões** | ❌ Não tinha | ✅ Completo com React |
+| **Login** | ❌ Não tinha | ✅ Sistema de autenticação |
+| **Missões Diárias** | ❌ Não tinha | ✅ Com anúncios e recompensas |
+| **Bot** | ✅ Simples | ✅ Integrado com painel |
+| **CORS** | ⚠️ Proxy externo | ✅ Backend próprio |
+| **Arquitetura** | Frontend puro | Frontend + Backend |
+| **Redirecionamento** | ❌ Manual | ✅ Automático após missões |
 
-### POST /api/play_scratch
-Joga uma raspadinha.
+## 🔧 Adaptações Realizadas
 
-```bash
-curl -X POST https://graninha-bot-render.onrender.com/api/play_scratch \
-  -H "Content-Type: application/json" \
-  -d '{"bearer_token": "seu_token", "ex_id": "seu_ex_id"}'
-```
+### 1. Aplicação React (index.html)
 
-### POST /api/play_roulette
-Joga a roleta.
+- ✅ Copiado do Young Money Tasks
+- ✅ Substituído "Young Money" por "Graninha"
+- ✅ Substituído "Pix Assistindo" por "Graninha Bot"
+- ✅ Atualizado link de redirecionamento para `/graninha-bot.html`
+- ✅ Mantida toda a lógica React original
 
-```bash
-curl -X POST https://graninha-bot-render.onrender.com/api/play_roulette \
-  -H "Content-Type: application/json" \
-  -d '{"bearer_token": "seu_token", "ex_id": "seu_ex_id"}'
-```
+### 2. Bot Graninha (graninha-bot.html)
 
-### POST /api/play_quiz
-Responde um quiz.
+- ✅ Renomeado de `index.html` para `graninha-bot.html`
+- ✅ Script adaptado para usar backend proxy
+- ✅ Removido `corsproxy.io` externo
+- ✅ Integrado com sistema de missões
 
-```bash
-curl -X POST https://graninha-bot-render.onrender.com/api/play_quiz \
-  -H "Content-Type: application/json" \
-  -d '{"bearer_token": "seu_token", "ex_id": "seu_ex_id"}'
-```
+### 3. Backend Express (server/index.js)
 
-### POST /api/play_game
-Joga um dos 33 jogos disponíveis.
+- ✅ Criado endpoint genérico `/api/:endpoint`
+- ✅ Aceita qualquer requisição dinamicamente
+- ✅ Headers corretos para API Graninha
+- ✅ Logs detalhados
 
-```bash
-curl -X POST https://graninha-bot-render.onrender.com/api/play_game \
-  -H "Content-Type: application/json" \
-  -d '{"bearer_token": "seu_token", "ex_id": "seu_ex_id", "game_id": 1}'
-```
+### 4. Arquivos Estáticos
 
-### POST /api/get_spin
-Obtém o resultado do spin da roleta.
-
-```bash
-curl -X POST https://graninha-bot-render.onrender.com/api/get_spin \
-  -H "Content-Type: application/json" \
-  -d '{"bearer_token": "seu_token", "ex_id": "seu_ex_id"}'
-```
-
-## 🌐 Acessar a Interface
-
-Após o deploy, acesse a URL do Render no navegador:
-
-```
-https://graninha-bot-render.onrender.com
-```
-
-A interface do Graninha Bot estará disponível com:
-
-1. **Configuração**: Insira seu Bearer Token e EX ID
-2. **Status**: Acompanhe saldo, ganhos e ações executadas
-3. **Logs**: Veja todos os eventos em tempo real
-4. **Loop Infinito**: Ative para execução contínua
-
-## 🔧 Solução de Problemas
-
-### Erro: "Build failed"
-- Verifique se o `package.json` está correto
-- Confirme que o `render.yaml` está no root do projeto
-- Verifique os logs no Render Dashboard
-
-### Erro: "Port already in use"
-- O Render atribui a porta automaticamente
-- Não é necessário configurar manualmente
-
-### Erro: "CORS Error"
-- Verifique se `CORS_ORIGIN` está configurado como `*`
-- Limpe o cache do navegador
-- Tente em uma aba anônima
-
-### Bot não conecta à API
-- Verifique o Bearer Token (tokens expiram)
-- Confirme que o EX ID está correto
-- Verifique os logs do servidor no Render Dashboard
-
-## 📊 Monitoramento
-
-No Render Dashboard, você pode:
-
-1. **Ver Logs**: Em tempo real do servidor
-2. **Monitorar Performance**: CPU, memória, requisições
-3. **Gerenciar Deploys**: Histórico e rollback
-4. **Configurar Alertas**: Notificações de erros
+- ✅ `assets/index-Bt8lmjj0.js` - JavaScript React adaptado
+- ✅ `assets/index-C85mVqpZ.css` - CSS React adaptado
+- ✅ `session-security.js` - Segurança de sessão mantida
 
 ## 🔐 Segurança
 
-- Nunca compartilhe seu Bearer Token
-- Use variáveis de ambiente para dados sensíveis
-- Mantenha o repositório privado se necessário
-- Revise os logs regularmente
+### Bearer Token
+
+- **Nunca compartilhe** seu Bearer Token
+- **Obtido via HTTP Catcher** no app Graninha
+- **Expira** após algumas horas
+- **Armazenado** apenas no navegador (não no servidor)
+
+### EX ID
+
+- **Específico** para cada usuário
+- **Encontrado** nas requisições do app
+- **Necessário** para todas as operações
+
+### Sessão
+
+- **Sistema de segurança** de sessão única
+- **Previne** múltiplas abas abertas
+- **Protege** contra uso indevido
+
+## 📊 Monitoramento
+
+### Logs do Servidor (Render Dashboard)
+
+```
+[PROXY] Requisição para user
+[PROXY] user - sucesso
+[PROXY] Requisição para scratch
+[PROXY] scratch - sucesso
+```
+
+### Logs do Bot (Interface)
+
+```
+📺 Carregando propaganda para raspadinha...
+📹 Assistindo propaganda... (32.5s)
+✅ Propaganda concluída, fechando...
+🎰 Jogando raspadinha...
+💰 Ganhou: 15 pontos
+```
+
+## 🎯 Próximos Passos
+
+Após o deployment:
+
+1. **Testar o painel** de missões
+2. **Fazer login** com e-mail
+3. **Completar missões** e assistir anúncios
+4. **Acessar o bot** via botão ou URL direta
+5. **Configurar o bot** com Bearer Token e EX ID
+6. **Iniciar automação** e acompanhar logs
 
 ## 📞 Suporte
 
-Se encontrar problemas:
+### Documentação
 
-1. Verifique os logs no Render Dashboard
-2. Abra o console do navegador (F12)
-3. Verifique a conectividade com a API Graninha
-4. Confirme que todas as variáveis de ambiente estão configuradas
+- **README.md** - Este arquivo
+- **DEPLOYMENT_GUIDE.md** - Guia de deployment detalhado
+- **RESUMO_PROJETO.md** - Resumo executivo
+
+### Recursos
+
+- **Render Docs**: https://render.com/docs
+- **GitHub Repo**: https://github.com/MadagascarMods/graninha-bot-render
+- **Render Community**: https://community.render.com
 
 ## 📄 Licença
 
@@ -242,10 +319,13 @@ MIT
 ## 🎯 Versão
 
 - **Graninha Bot**: v3.1
-- **Young Money Template**: Render Ready
+- **Painel de Missões**: Young Money Template (adaptado)
+- **Backend**: Express.js
 - **Data**: Dezembro 2025
 - **Status**: ✅ Pronto para Deploy
 
 ---
 
 **Desenvolvido com ❤️ para automação legítima do Graninha Bot**
+
+**Sistema completo:** Painel de Missões + Bot de Automação + Backend Proxy

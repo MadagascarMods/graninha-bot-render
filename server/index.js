@@ -39,8 +39,40 @@ app.use((req, res, next) => {
 // API Proxy Routes for Graninha Bot Backend
 const GRANINHA_API_URL = process.env.GRANINHA_API_URL || 'https://painel.graninha.com.br/api/v1';
 
-// Proxy: Get User Info
-app.post('/api/get_user', async (req, res) => {
+// Proxy genérico para API Graninha (aceita qualquer endpoint)
+app.post('/api/:endpoint', async (req, res) => {
+  try {
+    const { endpoint } = req.params;
+    const { bearer_token, data } = req.body;
+    
+    console.log(`[PROXY] Requisição para ${endpoint}`);
+    
+    const response = await axios.post(
+      `${GRANINHA_API_URL}/${endpoint}`,
+      data,
+      {
+        headers: {
+          'accept': 'application/json',
+          'authorization': `Bearer ${bearer_token}`,
+          'content-type': 'application/x-www-form-urlencoded',
+          'user-agent': 'okhttp/4.12.0'
+        }
+      }
+    );
+    
+    console.log(`[PROXY] ${endpoint} - sucesso`);
+    res.json(response.data);
+  } catch (error) {
+    console.error(`[PROXY] Erro em ${req.params.endpoint}:`, error.message);
+    res.status(error.response?.status || 500).json({
+      error: 'Erro na requisição',
+      message: error.message
+    });
+  }
+});
+
+// Proxy: Get User Info (mantido para compatibilidade)
+app.post('/api/get_user_old', async (req, res) => {
   try {
     console.log('[PROXY] Obtendo informações do usuário');
     

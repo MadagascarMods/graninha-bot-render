@@ -245,23 +245,20 @@ function criarPayload(idParam, ex, typeParam, xParam) {
 // ============================================
 
 async function fazerRequest(endpoint, data = null) {
-    // Usar proxy CORS para permitir requisições do navegador
-    const apiUrl = `${config.baseUrl}/${endpoint}`;
-    const url = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+    // Usar backend proxy do Render para evitar CORS
+    const url = `/api/${endpoint}`;
     
     const options = {
-        method: data ? 'POST' : 'GET',
+        method: 'POST',
         headers: {
-            'accept': 'application/json',
-            'authorization': `Bearer ${config.bearerToken}`,
-            'content-type': 'application/x-www-form-urlencoded',
-            'user-agent': 'okhttp/4.12.0'
-        }
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            bearer_token: config.bearerToken,
+            ex_id: config.exId,
+            data: data
+        })
     };
-    
-    if (data) {
-        options.body = data;
-    }
     
     try {
         const response = await fetch(url, options);
