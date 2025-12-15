@@ -1,802 +1,774 @@
-// ============================================
-// GRANINHA BOT - VERSÃO OTIMIZADA 100% LEGIT
-// ============================================
-// Simulação completa de comportamento humano
-// com vídeos, timing variável e padrões naturais
-// ============================================
-
-// Configuração global
-let config = {
-    bearerToken: '',
-    exId: '',
-    secretKey: '0NtCe2obYa13c3Bc1UEbVVj4p8IEDW',
-    baseUrl: 'https://painel.graninha.com.br/api/v1',
-    autoLoop: true
-};
-
-// IDs dos 33 jogos válidos
-const GAME_IDS = [
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-    11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-    21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-    31, 32, 33
-];
-
-// Valores possíveis da ROLETA (baseado em get_spin)
-const ROLETA_VALORES = [15, 18, 25, 30, 35, 60, 80, 100];
-
-// Valores possíveis da RASPADINHA (observados nas capturas: 14, 15, 22)
-// Estimativa baseada em padrão similar à roleta
-const RASPADINHA_VALORES = [10, 12, 14, 15, 18, 20, 22, 25, 28, 30, 35, 40, 45, 50];
-
-// QUIZ sempre ganha 25 pontos fixos (id: 0)
-const QUIZ_VALOR_FIXO = 0; // Envia id: 0, servidor retorna 25 pontos
-
-// Estado do bot
-let botState = {
-    running: false,
-    saldoInicial: 0,
-    saldoAtual: 0,
-    ganhoTotal: 0,
-    acoesExecutadas: 0,
-    loopInterval: null
-};
-
-// Elementos DOM
-const configForm = document.getElementById('configForm');
-const configSection = document.getElementById('configSection');
-const statusSection = document.getElementById('statusSection');
-const logsContainer = document.getElementById('logsContainer');
-const stopBtn = document.getElementById('stopBtn');
-const clearLogsBtn = document.getElementById('clearLogsBtn');
-
-// Event Listeners
-configForm.addEventListener('submit', iniciarBot);
-stopBtn.addEventListener('click', pararBot);
-clearLogsBtn.addEventListener('click', limparLogs);
-
-// ============================================
-// FUNÇÕES DE UTILIDADE E COMPORTAMENTO HUMANO
-// ============================================
-
-/**
- * Gera número aleatório entre min e max (inclusivo)
- */
-function randomRange(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-/**
- * Gera número aleatório com distribuição normal (mais natural)
- */
-function randomNormal(min, max) {
-    const u1 = Math.random();
-    const u2 = Math.random();
-    const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
-    const value = ((z0 + 3) / 6) * (max - min) + min;
-    return Math.max(min, Math.min(max, Math.floor(value)));
-}
-
-/**
- * Adiciona variação humana ao tempo (±20%)
- */
-function addHumanVariation(baseTime) {
-    const variation = baseTime * 0.2; // ±20%
-    return randomRange(baseTime - variation, baseTime + variation);
-}
-
-/**
- * Simula hesitação humana antes de clicar
- */
-async function hesitacaoHumana() {
-    const tempo = randomRange(800, 2500);
-    addLog(`⏱️ Preparando ação... (${(tempo/1000).toFixed(1)}s)`, 'info');
-    await sleep(tempo);
-}
-
-/**
- * Simula micro-pausa aleatória (30% de chance)
- */
-async function microPause() {
-    if (Math.random() < 0.3) {
-        const tempo = randomRange(1500, 4500);
-        addLog(`💭 Pausa natural... (${(tempo/1000).toFixed(1)}s)`, 'info');
-        await sleep(tempo);
+class PixAssistindoManager {
+    constructor() {
+        // Inicializar sistema de segurança de sessão única
+        this.sessionSecurity = new SessionSecurity();
+        
+        // Validar acesso antes de inicializar
+        this.validateAccess();
+        
+        this.isRunning = false;
+        this.intervalId = null;
+        this.stats = {
+            requests: 0,
+            successes: 0,
+            errors: 0,
+            totalEarnings: 0
+        };
+        this.autoScroll = true;
+        this.currentUserData = null;
+        this.rewardsConfig = null;
+        this.sessionStartTime = Date.now();
+        this.timerIntervalId = null;
+        
+        // Inicializar segurança de sessão
+        this.initializeSessionSecurity();
+        
+        this.initializeElements();
+        this.startSessionTimer();
+        this.bindEvents();
+        this.loadSettings();
+        this.updateUI();
+        this.loadRewardsConfig();
     }
-}
 
-/**
- * Decide se deve executar ação (85% de chance por padrão)
- */
-function shouldDoAction(probability = 0.85) {
-    return Math.random() < probability;
-}
-
-/**
- * FUNÇÃO CRÍTICA: Simula assistir vídeo de propaganda
- * Esta é a parte mais importante para evitar detecção!
- */
-async function assistirVideo(tipoAcao = 'ação') {
-    addLog(`📺 Carregando propaganda para ${tipoAcao}...`, 'info');
-    
-    // 1. Tempo de carregamento do vídeo (2-5s)
-    const tempoCarregamento = randomRange(2000, 5000);
-    await sleep(tempoCarregamento);
-    
-    // 2. Tempo de assistir vídeo (25-40s com variação humana)
-    // Baseado na análise do vídeo real
-    const videoDurationBase = randomRange(25000, 40000);
-    const videoDuration = addHumanVariation(videoDurationBase);
-    
-    addLog(`📹 Assistindo propaganda... (${(videoDuration/1000).toFixed(1)}s)`, 'warning');
-    
-    // Simular "heartbeat" durante vídeo (a cada 8-12s)
-    const heartbeatInterval = randomRange(8000, 12000);
-    const heartbeats = Math.floor(videoDuration / heartbeatInterval);
-    
-    for (let i = 0; i < heartbeats; i++) {
-        await sleep(heartbeatInterval);
-        if (i < heartbeats - 1) {
-            addLog(`📺 Assistindo... (${((i+1) * heartbeatInterval / 1000).toFixed(0)}s)`, 'info');
-        }
+    initializeElements() {
+        // Form elements
+        this.emailInput = document.getElementById('email');
+        this.tipoAnuncioSelect = document.getElementById('tipoAnuncio');
+        this.intervalSlider = document.getElementById('interval');
+        this.intervalValue = document.getElementById('intervalValue');
+        
+        // Control buttons
+        this.startBtn = document.getElementById('startBtn');
+        this.stopBtn = document.getElementById('stopBtn');
+        this.clearBtn = document.getElementById('clearBtn');
+        this.autoScrollBtn = document.getElementById('autoScrollBtn');
+        
+        // Status elements
+        this.statusDot = document.getElementById('statusDot');
+        this.statusText = document.getElementById('statusText');
+        
+        // Stats elements
+        this.requestCount = document.getElementById('requestCount');
+        this.successCount = document.getElementById('successCount');
+        this.errorCount = document.getElementById('errorCount');
+        this.totalEarnings = document.getElementById('totalEarnings');
+        
+        // Containers
+        this.userInfoContainer = document.getElementById('userInfoContainer');
+        this.missionContainer = document.getElementById('missionContainer');
+        this.rewardsContainer = document.getElementById('rewardsContainer');
+        this.logContainer = document.getElementById('logContainer');
     }
-    
-    // Tempo restante do vídeo
-    const tempoRestante = videoDuration - (heartbeats * heartbeatInterval);
-    if (tempoRestante > 0) {
-        await sleep(tempoRestante);
-    }
-    
-    // 3. Tempo para fechar vídeo e processar (1-3s)
-    const tempoFechar = randomRange(1000, 3000);
-    addLog(`✅ Propaganda concluída, fechando...`, 'success');
-    await sleep(tempoFechar);
-}
 
-/**
- * Simula tempo para ver e processar resultado
- */
-async function verResultado() {
-    const tempo = randomRange(2000, 5000);
-    await sleep(tempo);
-}
+    bindEvents() {
+        // Slider value update
+        this.intervalSlider.addEventListener('input', (e) => {
+            this.intervalValue.textContent = e.target.value;
+            this.saveSettings();
+        });
 
-/**
- * Intervalo natural entre ações
- */
-async function intervaloEntreAcoes() {
-    const tempo = randomNormal(3000, 10000);
-    await sleep(tempo);
-}
+        // Control buttons
+        this.startBtn.addEventListener('click', () => this.start());
+        this.stopBtn.addEventListener('click', () => this.stop());
+        this.clearBtn.addEventListener('click', () => this.clearLog());
+        this.autoScrollBtn.addEventListener('click', () => this.toggleAutoScroll());
 
-// ============================================
-// FUNÇÕES DE LOG E INTERFACE
-// ============================================
+        // Save settings on input change
+        this.emailInput.addEventListener('input', () => this.saveSettings());
+        this.tipoAnuncioSelect.addEventListener('change', () => this.saveSettings());
 
-function addLog(message, type = 'info') {
-    const time = new Date().toLocaleTimeString('pt-BR');
-    const logEntry = document.createElement('div');
-    logEntry.className = `log-entry ${type}`;
-    logEntry.innerHTML = `
-        <span class="log-time">${time}</span>
-        <span class="log-message">${message}</span>
-    `;
-    logsContainer.appendChild(logEntry);
-    logsContainer.scrollTop = logsContainer.scrollHeight;
-}
-
-function limparLogs() {
-    logsContainer.innerHTML = '';
-    addLog('Logs limpos', 'info');
-}
-
-function atualizarStats() {
-    document.getElementById('saldoInicial').textContent = botState.saldoInicial;
-    document.getElementById('saldoAtual').textContent = botState.saldoAtual;
-    document.getElementById('ganhoTotal').textContent = `+${botState.ganhoTotal}`;
-    document.getElementById('acoesExecutadas').textContent = botState.acoesExecutadas;
-}
-
-// ============================================
-// FUNÇÕES DE CRIPTOGRAFIA E PAYLOAD
-// ============================================
-
-function loadMD5Library() {
-    return new Promise((resolve, reject) => {
-        if (typeof CryptoJS !== 'undefined') {
-            resolve();
-            return;
-        }
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js';
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-    });
-}
-
-function gerarHash(idParam, typeParam, xParam) {
-    const data = `${config.exId}_${idParam}_${typeParam}_${xParam}${config.secretKey}`;
-    const md5Hash = CryptoJS.MD5(data).toString();
-    return btoa(md5Hash);
-}
-
-function criarPayload(idParam, ex, typeParam, xParam) {
-    const payload = {
-        id: idParam,
-        ex_id: config.exId,
-        ex: ex,
-        type: typeParam,
-        i4: String(Math.floor(Math.random() * 900)),
-        x_: xParam,
-        ts: Math.floor(Date.now() / 1000),
-        dt_x_X: gerarHash(idParam, typeParam, xParam)
-    };
-    
-    const jsonStr = JSON.stringify(payload);
-    const layer1 = btoa(jsonStr);
-    const layer2 = btoa(layer1);
-    
-    return `data=${layer2}`;
-}
-
-// ============================================
-// FUNÇÕES DE API
-// ============================================
-
-async function fazerRequest(endpoint, data = null) {
-    // Usar backend proxy do Render para evitar CORS
-    const url = `/api/${endpoint}`;
-    
-    const options = {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            bearer_token: config.bearerToken,
-            ex_id: config.exId,
-            data: data
-        })
-    };
-    
-    try {
-        const response = await fetch(url, options);
-        const result = await response.json();
-        result.http_code = response.status;
-        return result;
-    } catch (error) {
-        return { error: error.message, code: 500 };
-    }
-}
-
-async function verSaldo() {
-    const payload = criarPayload(0, "", 15, 1);
-    const result = await fazerRequest("user", payload);
-    
-    if (result.code === 1) {
-        return result.balance || 0;
-    }
-    
-    return -1;
-}
-
-async function verificarLimite(ex) {
-    const idParam = ex === "1" ? 1 : (ex === "2" ? 2 : 3);
-    const payload = criarPayload(idParam, ex, 4, 0);
-    const result = await fazerRequest("datas", payload);
-    
-    if (result.code === 201) {
-        const limit = parseInt(result.limit || 0);
-        const count = parseInt(result.count || 0);
-        
-        const disponivel = count < 0 ? Math.abs(count) : Math.max(0, limit - count);
-        return disponivel;
-    }
-    
-    return 0;
-}
-
-// ============================================
-// FUNÇÕES DE EXECUÇÃO DE AÇÕES (OTIMIZADAS)
-// ============================================
-
-async function executarAcao(ex, nomeAcao, xValue) {
-    // Escolher valor baseado no tipo de ação
-    let valorId;
-    if (ex === "1") {
-        // Roleta - usar valores aleatórios da roleta
-        valorId = ROLETA_VALORES[randomRange(0, ROLETA_VALORES.length - 1)];
-    } else if (ex === "3") {
-        // Raspadinha - usar valores aleatórios da raspadinha
-        valorId = RASPADINHA_VALORES[randomRange(0, RASPADINHA_VALORES.length - 1)];
-    } else if (ex === "2") {
-        // Quiz - SEMPRE id: 0 (servidor retorna 25 pontos fixos)
-        valorId = QUIZ_VALOR_FIXO;
-    } else {
-        // Outros - usar valores da roleta como padrão
-        valorId = ROLETA_VALORES[randomRange(0, ROLETA_VALORES.length - 1)];
-    }
-    
-    const payload = criarPayload(valorId, ex, 8, xValue);
-    const result = await fazerRequest("datas", payload);
-    
-    if (result.code === 201) {
-        const msg = result.msg || 'Ação realizada';
-        const balance = result.balance || 0;
-        return { sucesso: true, saldo: balance, msg };
-    }
-    
-    const erroMsg = result.msg || result.error || result.message || 'Erro desconhecido';
-    return { sucesso: false, saldo: 0, msg: erroMsg };
-}
-
-async function executarJogo(idJogo) {
-    const payload = criarPayload(idJogo, "", 14, 1);
-    const result = await fazerRequest("datas", payload);
-    
-    if (result.code === 201) {
-        const msg = result.msg || 'Ação realizada';
-        const balance = result.balance || 0;
-        return { sucesso: true, saldo: balance, msg };
-    }
-    
-    const erroMsg = result.msg || result.error || result.message || 'Erro desconhecido';
-    return { sucesso: false, saldo: 0, msg: erroMsg };
-}
-
-// ============================================
-// FUNÇÕES PRINCIPAIS (REFATORADAS)
-// ============================================
-
-async function executarRaspadinhas() {
-    addLog('=== RASPADINHAS ===', 'info');
-    
-    await microPause(); // Pausa natural antes de começar
-    
-    const raspadinhas = await verificarLimite("3");
-    addLog(`Raspadinhas disponíveis: ${raspadinhas}`, 'info');
-    
-    if (raspadinhas === 0) {
-        addLog('Nenhuma raspadinha disponível', 'warning');
-        document.getElementById('progressRaspadinha').textContent = '0/0';
-        return { acoes: 0, ganho: 0 };
-    }
-    
-    let sucessoCount = 0;
-    let totalGanho = 0;
-    
-    // Decidir quantas fazer (85-100% das disponíveis)
-    const quantidadeFazer = Math.ceil(raspadinhas * randomRange(85, 100) / 100);
-    addLog(`Planejando fazer ${quantidadeFazer} de ${raspadinhas} raspadinhas`, 'info');
-    
-    for (let i = 0; i < quantidadeFazer; i++) {
-        if (!botState.running) break;
-        
-        // Hesitação antes de clicar
-        await hesitacaoHumana();
-        
-        // CRÍTICO: Assistir vídeo de propaganda
-        await assistirVideo('raspadinha');
-        
-        const xAtual = raspadinhas - i;
-        const resultado = await executarAcao("3", "raspadinha", xAtual);
-        
-        if (resultado.sucesso) {
-            sucessoCount++;
-            botState.acoesExecutadas++;
-            const match = resultado.msg.match(/^(\d+)/);
-            if (match) {
-                const pontos = parseInt(match[1]);
-                totalGanho += pontos;
-                botState.ganhoTotal += pontos;
-                botState.saldoAtual = resultado.saldo;
-                addLog(`✓ Raspadinha ${i+1}/${quantidadeFazer}: +${pontos} pontos`, 'success');
-            } else {
-                addLog(`✓ Raspadinha ${i+1}/${quantidadeFazer}: ${resultado.msg}`, 'success');
-            }
-        } else {
-            addLog(`✗ Raspadinha ${i+1}/${quantidadeFazer}: ${resultado.msg}`, 'error');
-        }
-        
-        document.getElementById('progressRaspadinha').textContent = `${i+1}/${quantidadeFazer}`;
-        atualizarStats();
-        
-        // Ver resultado
-        await verResultado();
-        
-        // Intervalo natural entre ações
-        if (i < quantidadeFazer - 1) {
-            await intervaloEntreAcoes();
-        }
-    }
-    
-    addLog(`Raspadinhas concluídas: ${sucessoCount}/${quantidadeFazer} (+${totalGanho} pontos)`, 'success');
-    return { acoes: sucessoCount, ganho: totalGanho };
-}
-
-async function executarRoleta() {
-    addLog('=== ROLETA ===', 'info');
-    
-    await microPause();
-    
-    const giros = await verificarLimite("1");
-    addLog(`Giros disponíveis: ${giros}`, 'info');
-    
-    if (giros === 0) {
-        addLog('Nenhum giro disponível', 'warning');
-        document.getElementById('progressRoleta').textContent = '0/0';
-        return { acoes: 0, ganho: 0 };
-    }
-    
-    let sucessoCount = 0;
-    let totalGanho = 0;
-    
-    const quantidadeFazer = Math.ceil(giros * randomRange(85, 100) / 100);
-    addLog(`Planejando fazer ${quantidadeFazer} de ${giros} giros`, 'info');
-    
-    for (let i = 0; i < quantidadeFazer; i++) {
-        if (!botState.running) break;
-        
-        await hesitacaoHumana();
-        await assistirVideo('roleta');
-        
-        const xAtual = giros - i;
-        const resultado = await executarAcao("1", "roleta", xAtual);
-        
-        if (resultado.sucesso) {
-            sucessoCount++;
-            botState.acoesExecutadas++;
-            const match = resultado.msg.match(/^(\d+)/);
-            if (match) {
-                const pontos = parseInt(match[1]);
-                totalGanho += pontos;
-                botState.ganhoTotal += pontos;
-                botState.saldoAtual = resultado.saldo;
-                addLog(`✓ Giro ${i+1}/${quantidadeFazer}: +${pontos} pontos`, 'success');
-            } else {
-                addLog(`✓ Giro ${i+1}/${quantidadeFazer}: ${resultado.msg}`, 'success');
-            }
-        } else {
-            addLog(`✗ Giro ${i+1}/${quantidadeFazer}: ${resultado.msg}`, 'error');
-        }
-        
-        document.getElementById('progressRoleta').textContent = `${i+1}/${quantidadeFazer}`;
-        atualizarStats();
-        
-        await verResultado();
-        
-        if (i < quantidadeFazer - 1) {
-            await intervaloEntreAcoes();
-        }
-    }
-    
-    addLog(`Roleta concluída: ${sucessoCount}/${quantidadeFazer} (+${totalGanho} pontos)`, 'success');
-    return { acoes: sucessoCount, ganho: totalGanho };
-}
-
-async function executarQuiz() {
-    addLog('=== QUIZ DE MATEMÁTICA ===', 'info');
-    
-    await microPause();
-    
-    const quizzes = await verificarLimite("2");
-    addLog(`Quizzes disponíveis: ${quizzes}`, 'info');
-    
-    if (quizzes === 0) {
-        addLog('Nenhum quiz disponível', 'warning');
-        document.getElementById('progressQuiz').textContent = '0/0';
-        return { acoes: 0, ganho: 0 };
-    }
-    
-    let sucessoCount = 0;
-    let totalGanho = 0;
-    
-    const quantidadeFazer = Math.ceil(quizzes * randomRange(85, 100) / 100);
-    addLog(`Planejando fazer ${quantidadeFazer} de ${quizzes} quizzes`, 'info');
-    
-    for (let i = 0; i < quantidadeFazer; i++) {
-        if (!botState.running) break;
-        
-        await hesitacaoHumana();
-        await assistirVideo('quiz');
-        
-        // Tempo extra para "ler" e "responder" pergunta (5-10s)
-        const tempoLeitura = randomRange(5000, 10000);
-        addLog(`📖 Lendo pergunta e respondendo... (${(tempoLeitura/1000).toFixed(1)}s)`, 'info');
-        await sleep(tempoLeitura);
-        
-        const xAtual = quizzes - i;
-        const resultado = await executarAcao("2", "quiz", xAtual);
-        
-        if (resultado.sucesso) {
-            sucessoCount++;
-            botState.acoesExecutadas++;
-            const match = resultado.msg.match(/^(\d+)/);
-            if (match) {
-                const pontos = parseInt(match[1]);
-                totalGanho += pontos;
-                botState.ganhoTotal += pontos;
-                botState.saldoAtual = resultado.saldo;
-                addLog(`✓ Quiz ${i+1}/${quantidadeFazer}: +${pontos} pontos`, 'success');
-            } else {
-                addLog(`✓ Quiz ${i+1}/${quantidadeFazer}: ${resultado.msg}`, 'success');
-            }
-        } else {
-            addLog(`✗ Quiz ${i+1}/${quantidadeFazer}: ${resultado.msg}`, 'error');
-        }
-        
-        document.getElementById('progressQuiz').textContent = `${i+1}/${quantidadeFazer}`;
-        atualizarStats();
-        
-        await verResultado();
-        
-        if (i < quantidadeFazer - 1) {
-            await intervaloEntreAcoes();
-        }
-    }
-    
-    addLog(`Quiz concluído: ${sucessoCount}/${quantidadeFazer} (+${totalGanho} pontos)`, 'success');
-    return { acoes: sucessoCount, ganho: totalGanho };
-}
-
-async function executarTodosJogos() {
-    addLog('=== JOGOS (33 IDs) ===', 'info');
-    
-    await microPause();
-    
-    addLog('Testando jogos disponíveis...', 'info');
-    
-    let sucessoCount = 0;
-    let totalGanho = 0;
-    
-    // Embaralhar ordem dos jogos ocasionalmente (30% de chance)
-    let jogosParaTestar = [...GAME_IDS];
-    if (Math.random() < 0.3) {
-        addLog('🔀 Variando ordem dos jogos...', 'info');
-        jogosParaTestar.sort(() => Math.random() - 0.5);
-    }
-    
-    // Decidir quantos jogos testar (70-100%)
-    const quantidadeTestar = Math.ceil(jogosParaTestar.length * randomRange(70, 100) / 100);
-    addLog(`Planejando testar ${quantidadeTestar} de ${jogosParaTestar.length} jogos`, 'info');
-    
-    for (let i = 0; i < quantidadeTestar; i++) {
-        if (!botState.running) break;
-        
-        const id = jogosParaTestar[i];
-        
-        await hesitacaoHumana();
-        await assistirVideo(`jogo ${id}`);
-        
-        const resultado = await executarJogo(id);
-        
-        if (resultado.sucesso) {
-            sucessoCount++;
-            botState.acoesExecutadas++;
-            const match = resultado.msg.match(/^(\d+)/);
-            if (match) {
-                const pontos = parseInt(match[1]);
-                totalGanho += pontos;
-                botState.ganhoTotal += pontos;
-                botState.saldoAtual = resultado.saldo;
-                addLog(`✓ Jogo ID ${id}: +${pontos} pontos`, 'success');
-            } else {
-                addLog(`✓ Jogo ID ${id}: ${resultado.msg}`, 'success');
-            }
-        } else {
-            if (resultado.msg.includes('já foi reivindicado') || resultado.msg.includes('reivindicado')) {
-                addLog(`⏭ Jogo ID ${id}: Já reivindicado hoje`, 'warning');
-            } else {
-                addLog(`✗ Jogo ID ${id}: ${resultado.msg}`, 'error');
-            }
-        }
-        
-        document.getElementById('progressJogos').textContent = `${i+1}/${quantidadeTestar}`;
-        atualizarStats();
-        
-        await verResultado();
-        
-        if (i < quantidadeTestar - 1) {
-            await intervaloEntreAcoes();
-        }
-    }
-    
-    addLog(`Jogos concluídos: ${sucessoCount}/${quantidadeTestar} (+${totalGanho} pontos)`, 'success');
-    return { acoes: sucessoCount, ganho: totalGanho };
-}
-
-// ============================================
-// LOOP INFINITO (OTIMIZADO)
-// ============================================
-
-async function loopJogos() {
-    let tentativa = 0;
-    
-    while (botState.running && config.autoLoop) {
-        tentativa++;
-        addLog(`\n=== LOOP INFINITO - Tentativa #${tentativa} ===`, 'info');
-        
-        let ganhouAlgo = false;
-        
-        // Embaralhar jogos
-        const jogosEmbaralhados = [...GAME_IDS].sort(() => Math.random() - 0.5);
-        
-        for (const id of jogosEmbaralhados) {
-            if (!botState.running) break;
-            
-            // Só tentar alguns jogos por loop (não todos)
-            if (Math.random() < 0.3) continue; // 30% de chance de pular
-            
-            await hesitacaoHumana();
-            await assistirVideo(`jogo ${id}`);
-            
-            const resultado = await executarJogo(id);
-            
-            if (resultado.sucesso) {
-                ganhouAlgo = true;
-                botState.acoesExecutadas++;
-                const match = resultado.msg.match(/^(\d+)/);
-                if (match) {
-                    const pontos = parseInt(match[1]);
-                    botState.ganhoTotal += pontos;
-                    botState.saldoAtual = resultado.saldo;
-                    addLog(`✓ Jogo ID ${id}: +${pontos} pontos`, 'success');
-                    atualizarStats();
+        // Prevent form submission on Enter
+        this.emailInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!this.isRunning && this.validateInputs()) {
+                    this.start();
                 }
             }
+        });
+    }
+
+    saveSettings() {
+        const settings = {
+            email: this.emailInput.value,
+            tipoAnuncio: this.tipoAnuncioSelect.value,
+            interval: this.intervalSlider.value
+        };
+        localStorage.setItem('pixAssistindoSettings', JSON.stringify(settings));
+    }
+
+    loadSettings() {
+        try {
+            const settings = JSON.parse(localStorage.getItem('pixAssistindoSettings') || '{}');
+            if (settings.email) this.emailInput.value = settings.email;
+            if (settings.tipoAnuncio) this.tipoAnuncioSelect.value = settings.tipoAnuncio;
+            if (settings.interval) {
+                this.intervalSlider.value = settings.interval;
+                this.intervalValue.textContent = settings.interval;
+            }
+        } catch (error) {
+            console.error('Erro ao carregar configurações:', error);
+        }
+    }
+
+    validateInputs() {
+        const email = this.emailInput.value.trim();
+
+        if (!email) {
+            this.addLog('error', 'E-mail é obrigatório');
+            this.emailInput.focus();
+            return false;
+        }
+
+        // Validação básica de e-mail
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            this.addLog('error', 'Formato de e-mail inválido');
+            this.emailInput.focus();
+            return false;
+        }
+
+        return true;
+    }
+
+    async loadRewardsConfig() {
+        try {
+            this.addLog('info', '⚙️ Carregando configurações de recompensa...');
+            const config = await this.getConfigMissao();
             
-            await verResultado();
-            await intervaloEntreAcoes();
+            if (config) {
+                this.rewardsConfig = config;
+                this.updateRewardsDisplay(config);
+                this.addLog('success', '✅ Configurações de recompensa carregadas');
+            } else {
+                this.addLog('warning', '⚠️ Não foi possível carregar configurações de recompensa');
+            }
+        } catch (error) {
+            this.addLog('error', `❌ Erro ao carregar configurações: ${error.message}`);
+        }
+    }
+
+    async start() {
+        if (!this.validateInputs()) {
+            return;
+        }
+
+        // Verificar se usuário foi resetado antes de iniciar
+        const email = this.emailInput.value.trim();
+        const resetCheck = await this.checkIfReset(email);
+        
+        if (resetCheck.isReset) {
+            this.addLog('error', '❌ Sua conta foi resetada. Você precisa fazer login novamente.');
+            alert('Sua conta foi resetada. Você precisa fazer login novamente para completar as tarefas.');
+            window.location.href = '/';
+            return;
+        }
+
+        this.isRunning = true;
+        this.updateUI();
+        
+        const tipoAnuncio = this.tipoAnuncioSelect.value;
+        
+        this.addLog('info', `🚀 Iniciando simulação de anúncios para: ${email}`);
+        this.addLog('info', `📺 Tipo de anúncio: ${tipoAnuncio === 'rewarded' ? 'Recompensado' : 'Intersticial'}`);
+        this.addLog('info', `⏱️ Intervalo: ${this.intervalSlider.value} segundos`);
+
+        // Primeira execução imediata
+        await this.watchAd();
+
+        // Configurar execução periódica
+        const intervalMs = parseInt(this.intervalSlider.value) * 1000;
+        this.intervalId = setInterval(() => {
+            this.watchAd();
+        }, intervalMs);
+    }
+
+    stop() {
+        this.isRunning = false;
+        if (this.intervalId) {
+            clearInterval(this.intervalId);
+            this.intervalId = null;
+        }
+        this.updateUI();
+        this.addLog('info', '⏹️ Simulação parada pelo usuário');
+    }
+
+    async watchAdManual() {
+        if (this.isRunning) {
+            this.addLog('warning', '⚠️ Pare a simulação automática antes de usar o modo manual');
+            return;
+        }
+
+        if (!this.validateInputs()) {
+            return;
+        }
+
+        await this.watchAd();
+    }
+
+    async watchAd() {
+        if (!this.isRunning && !this.validateInputs()) return;
+
+        const email = this.emailInput.value.trim();
+        const tipoAnuncio = this.tipoAnuncioSelect.value;
+        const timestamp = new Date().toLocaleTimeString('pt-BR');
+        
+        this.stats.requests++;
+        this.updateStats();
+
+        try {
+            this.addLog('info', `🔍 ${timestamp} - Buscando dados do usuário...`);
+            
+            // 1. Buscar usuário atual
+            const userData = await this.buscarUsuario(email);
+            
+            if (!userData || userData.count === 0) {
+                throw new Error('Usuário não encontrado');
+            }
+
+            const usuario = userData.results[0];
+            const saldoAtual = parseFloat(usuario.saldo);
+            
+            this.addLog('success', `💰 ${timestamp} - Saldo atual: R$ ${saldoAtual.toFixed(5)}`);
+            this.updateUserInfo(usuario);
+
+            // 2. Calcular recompensa
+            const recompensa = this.calculateReward(tipoAnuncio);
+            const novoSaldo = saldoAtual + recompensa;
+
+            this.addLog('info', `🎯 ${timestamp} - Assistindo anúncio ${tipoAnuncio === 'rewarded' ? 'recompensado' : 'intersticial'}...`);
+            this.addLog('money', `💵 ${timestamp} - Recompensa: R$ ${recompensa.toFixed(5)}`);
+
+            // 3. Atualizar saldo do usuário
+            const updateResult = await this.atualizarUsuario(usuario.id, novoSaldo.toFixed(5), 1);
+            
+            if (updateResult && updateResult.sucesso) {
+                this.addLog('success', `✅ ${timestamp} - Saldo atualizado: R$ ${novoSaldo.toFixed(5)}`);
+            } else {
+                throw new Error('Falha ao atualizar saldo do usuário');
+            }
+
+            // 4. Atualizar missão
+            const missionResult = await this.atualizarMissao(email, recompensa.toFixed(5));
+            
+            if (missionResult && missionResult.sucesso) {
+                this.addLog('success', `🎯 ${timestamp} - Missão atualizada`);
+                
+                // Atualizar display da missão
+                if (missionResult.progresso && missionResult.meta) {
+                    this.updateMissionDisplay({
+                        progresso: missionResult.progresso,
+                        meta: missionResult.meta,
+                        ultima_missao: missionResult.ultima_missao || new Date().toISOString().split('T')[0]
+                    });
+                }
+            } else {
+                this.addLog('warning', `⚠️ ${timestamp} - Falha ao atualizar missão`);
+            }
+
+            // 5. Buscar dados atualizados
+            const updatedUserData = await this.buscarUsuario(email);
+            if (updatedUserData && updatedUserData.count > 0) {
+                this.updateUserInfo(updatedUserData.results[0]);
+            }
+
+            this.stats.successes++;
+            this.stats.totalEarnings += recompensa;
+            
+        } catch (error) {
+            this.handleError(error, timestamp);
         }
         
-        if (!ganhouAlgo) {
-            addLog('⏳ Nenhum jogo disponível no momento', 'warning');
+        this.updateStats();
+    }
+
+    calculateReward(tipoAnuncio) {
+        if (!this.rewardsConfig) {
+            // Valores padrão se não conseguir carregar configurações
+            return tipoAnuncio === 'rewarded' ? 
+                0.001 + (Math.random() * 0.004) : // 0.001 a 0.005
+                0.002; // valor fixo para intersticial
+        }
+
+        switch (tipoAnuncio) {
+            case 'rewarded':
+                const min = parseFloat(this.rewardsConfig.rewarded_min || 0.001);
+                const max = parseFloat(this.rewardsConfig.rewarded_max || 0.005);
+                return min + (Math.random() * (max - min));
+            case 'interstitial':
+                return parseFloat(this.rewardsConfig.interstitial_reward || 0.002);
+            default:
+                return 0.001;
+        }
+    }
+
+    async buscarUsuario(email) {
+        try {
+            const response = await fetch('/api/buscar_usuario', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=UTF-8',
+                    'Host': 'pixassistindo.thm.app.br',
+                    'User-Agent': 'okhttp/4.11.0'
+                },
+                body: JSON.stringify({ email: email })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            throw new Error(`Erro ao buscar usuário: ${error.message}`);
+        }
+    }
+
+    async checkIfReset(email) {
+        try {
+            // Buscar userId do localStorage
+            const userId = localStorage.getItem('user_id');
+            
+            if (!userId) {
+                return { isReset: true };
+            }
+            
+            // Consultar API do Railway para verificar status
+            const response = await fetch(`/api/stats/user/${userId}`);
+            
+            if (!response.ok) {
+                console.error('[CHECK RESET] Erro ao verificar status:', response.status);
+                return { isReset: false }; // Não bloquear se API falhar
+            }
+            
+            const data = await response.json();
+            console.log('[CHECK RESET] Dados do usuário:', data);
+            
+            // Verificar se foi resetado (time_remaining = 0 e is_expired = true)
+            const isReset = data.time_remaining === 0 && data.is_expired === true;
+            
+            return { isReset, data };
+        } catch (error) {
+            console.error('[CHECK RESET] Erro:', error);
+            return { isReset: false }; // Não bloquear se houver erro
+        }
+    }
+
+    async atualizarUsuario(id, saldo, views) {
+        try {
+            const response = await fetch('/api/atualizar_usuario', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=UTF-8',
+                    'Host': 'pixassistindo.thm.app.br',
+                    'User-Agent': 'okhttp/4.11.0'
+                },
+                body: JSON.stringify({
+                    id: id.toString(),
+                    saldo: saldo,
+                    views: views
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            throw new Error(`Erro ao atualizar usuário: ${error.message}`);
+        }
+    }
+
+    async atualizarMissao(email, valorPago) {
+        try {
+            const response = await fetch('/api/atualizar_missao', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=UTF-8',
+                    'Host': 'pixassistindo.thm.app.br',
+                    'User-Agent': 'okhttp/4.11.0'
+                },
+                body: JSON.stringify({
+                    email: email,
+                    valor_pago: valorPago
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            throw new Error(`Erro ao atualizar missão: ${error.message}`);
+        }
+    }
+
+    async getConfigMissao() {
+        try {
+            const response = await fetch('/api/get_config_missao', {
+                method: 'GET',
+                headers: {
+                    'Host': 'pixassistindo.thm.app.br',
+                    'User-Agent': 'okhttp/4.11.0'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            throw new Error(`Erro ao obter configurações: ${error.message}`);
+        }
+    }
+
+    handleError(error, timestamp) {
+        this.stats.errors++;
+        
+        let errorMessage = error.message;
+        
+        // Tratar erros específicos
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            errorMessage = 'Erro de conectividade. Verifique sua conexão com a internet.';
+        } else if (error.message.includes('CORS')) {
+            errorMessage = 'Erro de CORS. O servidor pode não permitir requisições do navegador.';
         }
         
-        if (botState.running && config.autoLoop) {
-            // Intervalo realista: 5-15 minutos (baseado na análise)
-            const intervaloMinutos = randomRange(5, 15);
-            const intervaloMs = intervaloMinutos * 60 * 1000;
-            addLog(`⏳ Aguardando ${intervaloMinutos} minutos até próxima tentativa...`, 'info');
-            await sleep(intervaloMs);
+        this.addLog('error', `❌ ${timestamp} - ${errorMessage}`);
+        
+        // Se muitos erros consecutivos, sugerir parar
+        if (this.stats.errors > 3 && this.stats.successes === 0) {
+            this.addLog('warning', '⚠️ Muitos erros detectados. Verifique as configurações ou pare o processo.');
         }
+    }
+
+    updateUserInfo(userData) {
+        if (!userData) return;
+
+        this.currentUserData = userData;
+        
+        const userInfoHtml = `
+            <div class="user-info-grid">
+                <div class="user-info-item">
+                    <div class="user-info-label">ID</div>
+                    <div class="user-info-value">${userData.id || 'N/A'}</div>
+                </div>
+                <div class="user-info-item">
+                    <div class="user-info-label">E-mail</div>
+                    <div class="user-info-value">${userData.email || 'N/A'}</div>
+                </div>
+                <div class="user-info-item">
+                    <div class="user-info-label">Saldo</div>
+                    <div class="user-info-value">R$ ${parseFloat(userData.saldo || 0).toFixed(5)}</div>
+                </div>
+                <div class="user-info-item">
+                    <div class="user-info-label">Device ID</div>
+                    <div class="user-info-value">${userData.device_id || 'N/A'}</div>
+                </div>
+                <div class="user-info-item">
+                    <div class="user-info-label">Última Recompensa</div>
+                    <div class="user-info-value">${userData.ultima_recompensa || 'Nunca'}</div>
+                </div>
+                <div class="user-info-item">
+                    <div class="user-info-label">Status</div>
+                    <div class="user-info-value">${userData.banido ? 'Banido' : 'Ativo'}</div>
+                </div>
+            </div>
+        `;
+        
+        this.userInfoContainer.innerHTML = userInfoHtml;
+
+        // Atualizar missão se disponível
+        if (userData.progresso_missao2 !== undefined) {
+            this.updateMissionDisplay({
+                progresso: userData.progresso_missao2,
+                meta: userData.meta_missao2
+            });
+        }
+    }
+
+    updateMissionDisplay(missionData) {
+        const progresso = parseFloat(missionData.progresso || 0);
+        const meta = parseFloat(missionData.meta || 0.5);
+        const percentage = meta > 0 ? (progresso / meta) * 100 : 0;
+
+        const missionHtml = `
+            <div class="mission-grid">
+                <div class="mission-item">
+                    <div class="mission-label">Progresso Atual</div>
+                    <div class="mission-value">R$ ${progresso.toFixed(5)}</div>
+                </div>
+                <div class="mission-item">
+                    <div class="mission-label">Meta da Missão</div>
+                    <div class="mission-value">R$ ${meta.toFixed(5)}</div>
+                </div>
+                <div class="mission-item">
+                    <div class="mission-label">Percentual</div>
+                    <div class="mission-value">${percentage.toFixed(1)}%</div>
+                </div>
+                <div class="mission-item">
+                    <div class="mission-label">Última Atualização</div>
+                    <div class="mission-value">${missionData.ultima_missao || 'Hoje'}</div>
+                </div>
+            </div>
+            <div class="mission-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${Math.min(percentage, 100)}%"></div>
+                </div>
+                <div class="progress-text">
+                    Faltam R$ ${Math.max(0, meta - progresso).toFixed(5)} para completar a missão
+                </div>
+            </div>
+        `;
+        
+        this.missionContainer.innerHTML = missionHtml;
+    }
+
+    updateRewardsDisplay(rewardsData) {
+        const rewardsHtml = `
+            <div class="rewards-grid">
+                <div class="rewards-item">
+                    <div class="rewards-label">Recompensa Mínima (Rewarded)</div>
+                    <div class="rewards-value">R$ ${parseFloat(rewardsData.rewarded_min || 0).toFixed(5)}</div>
+                </div>
+                <div class="rewards-item">
+                    <div class="rewards-label">Recompensa Máxima (Rewarded)</div>
+                    <div class="rewards-value">R$ ${parseFloat(rewardsData.rewarded_max || 0).toFixed(5)}</div>
+                </div>
+                <div class="rewards-item">
+                    <div class="rewards-label">Recompensa Intersticial</div>
+                    <div class="rewards-value">R$ ${parseFloat(rewardsData.interstitial_reward || 0).toFixed(5)}</div>
+                </div>
+                <div class="rewards-item">
+                    <div class="rewards-label">Recompensa Login</div>
+                    <div class="rewards-value">R$ ${parseFloat(rewardsData.recompensa_login || 0).toFixed(5)}</div>
+                </div>
+                <div class="rewards-item">
+                    <div class="rewards-label">Nome da Missão</div>
+                    <div class="rewards-value">${rewardsData.nome_missao || 'Missão Padrão'}</div>
+                </div>
+            </div>
+        `;
+        
+        this.rewardsContainer.innerHTML = rewardsHtml;
+    }
+
+    addLog(type, message) {
+        // Remover mensagem de log vazio se existir
+        const emptyLog = this.logContainer.querySelector('.log-empty');
+        if (emptyLog) {
+            emptyLog.remove();
+        }
+
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-entry ${type}`;
+        logEntry.textContent = message;
+
+        this.logContainer.appendChild(logEntry);
+
+        // Limitar número de logs (manter últimos 100)
+        const logs = this.logContainer.querySelectorAll('.log-entry');
+        if (logs.length > 100) {
+            logs[0].remove();
+        }
+
+        // Auto scroll se habilitado
+        if (this.autoScroll) {
+            this.logContainer.scrollTop = this.logContainer.scrollHeight;
+        }
+    }
+
+    clearLog() {
+        this.logContainer.innerHTML = `
+            <div class="log-empty">
+                <span class="log-empty-icon">📝</span>
+                <p>Log limpo. Clique em "Iniciar Simulação" para começar novamente.</p>
+            </div>
+        `;
+        
+        // Reset stats
+        this.stats = {
+            requests: 0,
+            successes: 0,
+            errors: 0,
+            totalEarnings: this.stats.totalEarnings // Manter ganhos totais
+        };
+        this.updateStats();
+    }
+
+    toggleAutoScroll() {
+        this.autoScroll = !this.autoScroll;
+        this.autoScrollBtn.classList.toggle('active', this.autoScroll);
+        this.autoScrollBtn.textContent = this.autoScroll ? 'Auto Scroll' : 'Manual Scroll';
+    }
+
+    async startSessionTimer() {
+        const timerElement = document.getElementById('sessionTimer');
+        if (!timerElement) return;
+        
+        // Buscar userId da URL ou localStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('userId') || localStorage.getItem('user_id');
+        
+        if (!userId) {
+            console.error('[TIMER] userId não encontrado na URL ou localStorage');
+            timerElement.textContent = '00:00:00';
+            return;
+        }
+        
+        console.log('[TIMER] Usando userId:', userId);
+        console.log('[TIMER] API de verificação:', `https://monetag-postback-server-production.up.railway.app/api/stats/user/${userId}`);
+        
+        const updateTimer = async () => {
+            try {
+                // Buscar time_remaining do servidor Railway
+                const response = await fetch(`https://monetag-postback-server-production.up.railway.app/api/stats/user/${userId}`);
+                const data = await response.json();
+                
+                const timeRemaining = data.time_remaining || 0;
+                const impressions = data.total_impressions || 0;
+                const clicks = data.total_clicks || 0;
+                const sessionExpired = data.session_expired || false;
+                
+                console.log(`[PIX TIMER] Dados recebidos: ${impressions} impressões, ${clicks} cliques, ${timeRemaining}s restantes, expirado=${sessionExpired}`);
+                
+                const hours = Math.floor(timeRemaining / 3600);
+                const minutes = Math.floor((timeRemaining % 3600) / 60);
+                const seconds = timeRemaining % 60;
+                
+                timerElement.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                
+                // Se dados foram resetados (impressões e cliques voltaram para 0) OU sessão expirou, redirecionar
+                if ((impressions === 0 && clicks === 0) || sessionExpired) {
+                    console.log('[PIX] Dados resetados! Redirecionando para Young Money...');
+                    localStorage.removeItem('user_logged_in');
+                    localStorage.removeItem('user_id');
+                    localStorage.removeItem('user_email');
+                    window.location.href = '/';
+                    return;
+                }
+            } catch (error) {
+                console.error('[TIMER] Erro ao buscar time_remaining:', error);
+                timerElement.textContent = '--:--:--';
+            }
+        };
+        
+        // Atualizar imediatamente e depois a cada 1 hora
+        updateTimer();
+        this.timerIntervalId = setInterval(updateTimer, 3600000); // 3600000ms = 1 hora
+    }
+
+    updateUI() {
+        // Atualizar botões
+        this.startBtn.disabled = this.isRunning;
+        this.stopBtn.disabled = !this.isRunning;
+        
+        // Atualizar inputs
+        this.emailInput.disabled = this.isRunning;
+        this.tipoAnuncioSelect.disabled = this.isRunning;
+        this.intervalSlider.disabled = this.isRunning;
+        
+        // Atualizar status
+        if (this.isRunning) {
+            this.statusDot.className = 'status-dot running';
+            this.statusText.textContent = 'Executando';
+        } else {
+            this.statusDot.className = 'status-dot stopped';
+            this.statusText.textContent = 'Parado';
+        }
+    }
+
+    async initializeSessionSecurity() {
+        console.log('[SECURITY] Inicializando segurança de sessão...');
+        
+        const initialized = await this.sessionSecurity.initialize();
+        
+        if (!initialized) {
+            console.log('[SECURITY] ❌ Falha ao inicializar segurança - acesso bloqueado');
+            // O SessionSecurity já bloqueou o acesso
+            throw new Error('Sessão bloqueada');
+        }
+        
+        console.log('[SECURITY] ✅ Segurança de sessão ativada');
+    }
+
+    async validateAccess() {
+        console.log('[VALIDAÇÃO] Verificando se usuário completou tarefas...');
+        
+        // Pegar userId da URL ou localStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        const userIdFromUrl = urlParams.get('userId');
+        const storedUserId = localStorage.getItem('user_id');
+        const userId = userIdFromUrl || storedUserId;
+        
+        if (!userId) {
+            console.log('[VALIDAÇÃO] ❌ User ID não encontrado - redirecionando para login');
+            alert('Você precisa fazer login primeiro!');
+            window.location.href = '/';
+            return;
+        }
+        
+        try {
+            // Buscar stats do usuário no backend usando userId
+            const apiUrl = `https://monetag-postback-server-production.up.railway.app/api/stats/user/${userId}`;
+            console.log('[VALIDAÇÃO] Consultando API:', apiUrl);
+            
+            const response = await fetch(apiUrl);
+            
+            if (!response.ok) {
+                throw new Error(`Erro ao buscar stats: ${response.status} ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log('[VALIDAÇÃO] Resposta da API:', data);
+            
+            // Verificar se completou as tarefas (20 impressões + 8 cliques)
+            const impressions = data.total_impressions || 0;
+            const clicks = data.total_clicks || 0;
+            
+            console.log(`[VALIDAÇÃO] Progresso: ${impressions}/20 impressões, ${clicks}/8 cliques`);
+            
+            if (impressions < 20 || clicks < 8) {
+                console.log(`[VALIDAÇÃO] ❌ Tarefas incompletas`);
+                alert(`Você precisa completar as tarefas primeiro!\n\nProgresso atual:\n- Impressões: ${impressions}/20\n- Cliques: ${clicks}/8`);
+                window.location.href = '/';
+                return;
+            }
+            
+            console.log('[VALIDAÇÃO] ✅ Tarefas completas - acesso permitido');
+        } catch (error) {
+            console.error('[VALIDAÇÃO] ❌ Erro ao validar acesso:', error);
+            alert('Erro ao verificar seu progresso. Tente novamente.');
+            window.location.href = '/';
+        }
+    }
+    
+    updateStats() {
+        this.requestCount.textContent = this.stats.requests;
+        this.successCount.textContent = this.stats.successes;
+        this.errorCount.textContent = this.stats.errors;
+        this.totalEarnings.textContent = `R$ ${this.stats.totalEarnings.toFixed(5)}`;
     }
 }
 
-// ============================================
-// FUNÇÃO PRINCIPAL
-// ============================================
+// Inicializar aplicação quando DOM estiver carregado
+document.addEventListener('DOMContentLoaded', () => {
+    new PixAssistindoManager();
+});
 
-async function iniciarBot(e) {
-    e.preventDefault();
-    
-    // Carregar biblioteca MD5
-    try {
-        await loadMD5Library();
-    } catch (error) {
-        addLog('Erro ao carregar biblioteca MD5. Verifique sua conexão.', 'error');
-        return;
-    }
-    
-    // Obter configurações do formulário
-    config.bearerToken = document.getElementById('bearerToken').value.trim();
-    config.exId = document.getElementById('exId').value.trim();
-    config.secretKey = document.getElementById('secretKey').value.trim();
-    config.autoLoop = document.getElementById('autoLoop').checked;
-    
-    if (!config.bearerToken || !config.exId) {
-        addLog('Por favor, preencha Bearer Token e EX ID', 'error');
-        return;
-    }
-    
-    // Iniciar bot
-    botState.running = true;
-    configSection.style.display = 'none';
-    statusSection.style.display = 'block';
-    
-    limparLogs();
-    addLog('🚀 Bot iniciado - Versão 100% Legit!', 'success');
-    addLog('✨ Simulação completa de comportamento humano ativada', 'success');
-    addLog('Validando token...', 'info');
-    
-    // Verificar saldo inicial
-    const saldoInicial = await verSaldo();
-    
-    if (saldoInicial < 0) {
-        addLog('✗ Token inválido ou expirado!', 'error');
-        addLog('Obtenha um novo token usando HTTP Catcher', 'warning');
-        pararBot();
-        return;
-    }
-    
-    botState.saldoInicial = saldoInicial;
-    botState.saldoAtual = saldoInicial;
-    botState.ganhoTotal = 0;
-    botState.acoesExecutadas = 0;
-    
-    addLog(`✓ Token válido! Saldo inicial: ${saldoInicial}`, 'success');
-    atualizarStats();
-    
-    // Pausa inicial (simular navegação)
-    await microPause();
-    
-    // Decidir ordem das ações (variar 30% das vezes)
-    const acoes = ['raspadinhas', 'roleta', 'quiz', 'jogos'];
-    if (Math.random() < 0.3) {
-        addLog('🔀 Variando ordem das ações...', 'info');
-        acoes.sort(() => Math.random() - 0.5);
-    }
-    
-    // Executar ações na ordem decidida
-    for (const acao of acoes) {
-        if (!botState.running) break;
-        
-        switch(acao) {
-            case 'raspadinhas':
-                await executarRaspadinhas();
-                break;
-            case 'roleta':
-                await executarRoleta();
-                break;
-            case 'quiz':
-                await executarQuiz();
-                break;
-            case 'jogos':
-                await executarTodosJogos();
-                break;
-        }
-        
-        // Pausa entre categorias
-        if (botState.running) {
-            await microPause();
-        }
-    }
-    
-    if (!botState.running) return;
-    
-    // Atualizar saldo final
-    botState.saldoAtual = await verSaldo();
-    atualizarStats();
-    
-    addLog('\n=== RESUMO FINAL ===', 'info');
-    addLog(`Ações executadas: ${botState.acoesExecutadas}`, 'info');
-    addLog(`Saldo inicial: ${botState.saldoInicial}`, 'info');
-    addLog(`Saldo final: ${botState.saldoAtual}`, 'info');
-    addLog(`Ganho total: +${botState.ganhoTotal}`, 'success');
-    
-    // Iniciar loop se ativado
-    if (config.autoLoop && botState.running) {
-        addLog('\n🔄 Iniciando loop infinito com intervalos realistas...', 'info');
-        await loopJogos();
-    } else {
-        addLog('✓ Execução concluída!', 'success');
-        pararBot();
-    }
+// Service Worker para PWA (opcional)
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('SW registrado com sucesso:', registration);
+            })
+            .catch(registrationError => {
+                console.log('Falha no registro do SW:', registrationError);
+            });
+    });
 }
-
-function pararBot() {
-    botState.running = false;
-    if (botState.loopInterval) {
-        clearInterval(botState.loopInterval);
-        botState.loopInterval = null;
-    }
-    
-    addLog('⏹️ Bot parado pelo usuário', 'warning');
-    
-    setTimeout(() => {
-        configSection.style.display = 'block';
-        statusSection.style.display = 'none';
-    }, 2000);
-}
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-// Inicialização
-addLog('Bem-vindo ao Graninha Bot - Versão 100% Legit!', 'success');
-addLog('✨ Simulação completa de comportamento humano', 'info');
-addLog('📺 Vídeos de propaganda simulados (25-40s cada)', 'info');
-addLog('⏱️ Timing variável e natural', 'info');
-addLog('Configure suas credenciais e clique em Iniciar Bot', 'info');
