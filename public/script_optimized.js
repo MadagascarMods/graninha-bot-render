@@ -663,23 +663,34 @@ async function loopJogos() {
             const intervaloMs = intervaloMinutos * 60 * 1000;
             addLog(`⏳ Aguardando ${intervaloMinutos} minutos até próxima verificação...`, 'info');
             
-            // Verificar se missões foram resetadas a cada 20 minutos
-            const checkMissionsReset = async () => {
+            // Resetar missões expiradas e verificar se usuário precisa completar tarefas
+            const checkAndResetMissions = async () => {
                 try {
+                    // 1. Chamar API de reset para resetar missões expiradas
+                    addLog('🔄 Verificando missões expiradas...', 'info');
+                    const RESET_API = 'https://monetag-postback-server-production.up.railway.app/api/reset-expired';
+                    const resetResponse = await fetch(RESET_API, { method: 'POST' });
+                    const resetData = await resetResponse.json();
+                    
+                    if (resetData.success) {
+                        addLog(`✅ ${resetData.resetCount || 0} usuário(s) resetado(s)`, 'success');
+                    }
+                    
+                    // 2. Verificar se o usuário atual foi resetado
                     const userId = localStorage.getItem('user_id');
                     if (!userId) return false;
                     
-                    const API_URL = 'https://monetag-postback-server-production.up.railway.app/api/stats/user/';
-                    const response = await fetch(API_URL + userId);
-                    const data = await response.json();
+                    const STATS_API = 'https://monetag-postback-server-production.up.railway.app/api/stats/user/';
+                    const statsResponse = await fetch(STATS_API + userId);
+                    const statsData = await statsResponse.json();
                     
-                    if (data.success) {
-                        const impressions = data.total_impressions || 0;
-                        const clicks = data.total_clicks || 0;
+                    if (statsData.success) {
+                        const impressions = statsData.total_impressions || 0;
+                        const clicks = statsData.total_clicks || 0;
                         
-                        // Se impressões < 20 OU clicks < 2, missões foram resetadas
+                        // Se impressões < 20 OU clicks < 2, usuário precisa completar tarefas
                         if (impressions < 20 || clicks < 2) {
-                            addLog('⚠️ Missões resetadas! Redirecionando para completar tarefas...', 'warning');
+                            addLog('⚠️ Suas missões foram resetadas! Você precisa completar as tarefas novamente.', 'warning');
                             
                             // Mostrar pop-up
                             const overlay = document.createElement('div');
@@ -736,17 +747,20 @@ async function loopJogos() {
                             }, 3000);
                             
                             return true;
+                        } else {
+                            addLog(`✅ Missões OK - Impressões: ${impressions}/20, Cliques: ${clicks}/2`, 'success');
                         }
                     }
                     return false;
                 } catch (error) {
                     console.error('[MISSION CHECK] Erro:', error);
+                    addLog('⚠️ Erro ao verificar missões: ' + error.message, 'error');
                     return false;
                 }
             };
             
-            // Verificar antes de aguardar
-            const missionsReset = await checkMissionsReset();
+            // Verificar e resetar antes de aguardar
+            const missionsReset = await checkAndResetMissions();
             if (!missionsReset) {
                 await sleep(intervaloMs);
             }
