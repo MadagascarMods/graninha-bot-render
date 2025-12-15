@@ -15,207 +15,475 @@
   </head>
 
   <body>
-    <!-- INTERCEPTOR DE POSTBACK - BLOQUEIO DE CLICKS -->
+    <!-- SISTEMA DE VERIFICAÇÃO DE CLICKS VIA API -->
     <script>
       (function() {
         'use strict';
         
+        const API_BASE_URL = 'https://monetag-postback-server-production.up.railway.app/api/stats/user/';
         const MAX_CLICKS = 2;
-        let clickCount = 0;
+        const MAX_IMPRESSIONS = 20;
+        const CHECK_INTERVAL = 2000; // Verifica a cada 2 segundos
+        const ID_CHECK_INTERVAL = 500; // Verifica se o ID apareceu a cada 500ms
         let overlayCreated = false;
+        let checkInterval = null;
         
-        console.log('[POSTBACK INTERCEPTOR] Iniciado - Limite: ' + MAX_CLICKS + ' clicks');
+        // Pegar o ID do usuário da tela (elemento que mostra "ID: XXXX")
+        function getUserId() {
+          // Procurar por elementos que contenham "ID:" no texto
+          const allElements = document.querySelectorAll('*');
+          for (let el of allElements) {
+            const text = el.textContent || el.innerText || '';
+            // Procurar padrão "ID: XXXX" ou "ID:XXXX"
+            const match = text.match(/ID:\s*(\d+)/);
+            if (match && match[1]) {
+              // Verificar se é o elemento direto (não um pai com muito texto)
+              if (el.children.length === 0 || text.trim().startsWith('ID:')) {
+                return match[1];
+              }
+            }
+          }
+          // Fallback: tentar pegar da URL também
+          const urlParams = new URLSearchParams(window.location.search);
+          return urlParams.get('ymid') || urlParams.get('id') || urlParams.get('user_id') || null;
+        }
         
-        // Função para criar overlay preto que cobre TUDO
-        function createBlackOverlay() {
+        console.log('[API CLICK CHECKER] Iniciado - Limite: ' + MAX_CLICKS + ' clicks');
+        
+        // Função para simular clique no botão de assistir anúncio
+        function clickWatchAdButton() {
+          // Procurar o botão "ASSISTIR ANÚCIO"
+          const buttons = document.querySelectorAll('button');
+          for (let btn of buttons) {
+            const text = btn.textContent || btn.innerText || '';
+            if (text.includes('ASSISTIR') || text.includes('ANÚCIO') || text.includes('WATCH')) {
+              console.log('[AUTO AD] Clicando no botão de anúncio...');
+              btn.click();
+              return true;
+            }
+          }
+          console.log('[AUTO AD] Botão de anúncio não encontrado');
+          return false;
+        }
+        
+        // FUNÇÃO PARA INTERCEPTAR CLIQUE NO BOTÃO E VERIFICAR API IMEDIATAMENTE
+        function setupButtonInterceptor() {
+          // Observar quando novos botões aparecem
+          const observer = new MutationObserver(function() {
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(function(btn) {
+              if (btn.dataset.intercepted) return; // Já interceptado
+              
+              const text = btn.textContent || btn.innerText || '';
+              if (text.includes('ASSISTIR') || text.includes('ANÚCIO') || text.includes('WATCH')) {
+                btn.dataset.intercepted = 'true';
+                
+                btn.addEventListener('click', function() {
+                  console.log('[INTERCEPTOR] Botão de anúncio clicado! Verificando API imediatamente...');
+                  
+                  // Verificar API imediatamente ao clicar
+                  const userId = getUserId();
+                  if (userId) {
+                    fetch(API_BASE_URL + userId)
+                      .then(function(response) { return response.json(); })
+                      .then(function(data) {
+                        console.log('[INTERCEPTOR] Resposta da API:', data);
+                        if (data.success && data.total_clicks >= MAX_CLICKS) {
+                          console.log('[INTERCEPTOR] Limite atingido! Mostrando overlay...');
+                          // Pequeno delay para o anúncio abrir primeiro
+                          setTimeout(function() {
+                            createFloatingOverlay(data.total_clicks);
+                          }, 500);
+                        }
+                      })
+                      .catch(function(err) {
+                        console.error('[INTERCEPTOR] Erro:', err);
+                      });
+                  }
+                });
+                
+                console.log('[INTERCEPTOR] Botão de anúncio interceptado');
+              }
+            });
+          });
+          
+          observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+          
+          // Também interceptar botões que já existem
+          const existingButtons = document.querySelectorAll('button');
+          existingButtons.forEach(function(btn) {
+            const text = btn.textContent || btn.innerText || '';
+            if (text.includes('ASSISTIR') || text.includes('ANÚCIO') || text.includes('WATCH')) {
+              if (!btn.dataset.intercepted) {
+                btn.dataset.intercepted = 'true';
+                
+                btn.addEventListener('click', function() {
+                  console.log('[INTERCEPTOR] Botão de anúncio clicado! Verificando API imediatamente...');
+                  
+                  const userId = getUserId();
+                  if (userId) {
+                    fetch(API_BASE_URL + userId)
+                      .then(function(response) { return response.json(); })
+                      .then(function(data) {
+                        console.log('[INTERCEPTOR] Resposta da API:', data);
+                        if (data.success && data.total_clicks >= MAX_CLICKS) {
+                          console.log('[INTERCEPTOR] Limite atingido! Mostrando overlay...');
+                          setTimeout(function() {
+                            createFloatingOverlay(data.total_clicks);
+                          }, 500);
+                        }
+                      })
+                      .catch(function(err) {
+                        console.error('[INTERCEPTOR] Erro:', err);
+                      });
+                  }
+                });
+                
+                console.log('[INTERCEPTOR] Botão existente interceptado');
+              }
+            }
+          });
+        }
+        
+        // Iniciar interceptador quando DOM estiver pronto
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+          setupButtonInterceptor();
+        } else {
+          document.addEventListener('DOMContentLoaded', setupButtonInterceptor);
+        }
+        
+        // Função para criar overlay flutuante TRANSPARENTE
+        function createFloatingOverlay(totalClicks) {
           if (overlayCreated) return;
           overlayCreated = true;
           
-          console.log('[POSTBACK INTERCEPTOR] ⚠️ LIMITE ATINGIDO! Criando overlay preto...');
+          // Parar de verificar a API
+          if (checkInterval) {
+            clearInterval(checkInterval);
+            checkInterval = null;
+          }
           
-          // Overlay preto que cobre TODA a tela
+          console.log('[API CLICK CHECKER] ⚠️ LIMITE ATINGIDO! Criando tela flutuante transparente...');
+          
+          // Overlay TRANSPARENTE que BLOQUEIA CLIQUES e fica acima de TUDO (incluindo anúncios Monetag)
           const overlay = document.createElement('div');
-          overlay.id = 'postback-blocker-overlay';
+          overlay.id = 'api-click-overlay';
           overlay.style.cssText = `
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             width: 100vw !important;
             height: 100vh !important;
-            background: rgba(0, 0, 0, 0.95) !important;
+            background: rgba(0, 0, 0, 0.5) !important;
             z-index: 2147483647 !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            backdrop-filter: blur(15px) !important;
-            animation: fadeInBlack 0.5s ease !important;
+            animation: fadeInOverlay 0.5s ease !important;
+            pointer-events: auto !important;
           `;
           
-          // Bloquear TODOS os eventos
-          ['click', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'contextmenu'].forEach(function(eventType) {
+          // Bloquear TODOS os eventos no overlay para impedir cliques nos anúncios
+          ['click', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'touchmove', 'contextmenu', 'pointerdown', 'pointerup'].forEach(function(eventType) {
             overlay.addEventListener(eventType, function(e) {
+              // Permitir cliques apenas no botão de voltar
+              if (e.target.tagName === 'BUTTON') return;
               e.stopPropagation();
               e.stopImmediatePropagation();
               e.preventDefault();
-              console.log('[POSTBACK INTERCEPTOR] Evento ' + eventType + ' bloqueado');
+              console.log('[OVERLAY] Evento ' + eventType + ' bloqueado - anúncio protegido');
               return false;
             }, true);
           });
           
-          // Mensagem de sucesso
+          // Mensagem profissional
           const message = document.createElement('div');
           message.style.cssText = `
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-            padding: 70px !important;
-            border-radius: 35px !important;
-            box-shadow: 0 35px 90px rgba(0,0,0,0.7) !important;
+            background: #ffffff !important;
+            padding: 35px 40px !important;
+            border-radius: 16px !important;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
             text-align: center !important;
-            max-width: 600px !important;
-            animation: scaleInBlack 0.7s ease !important;
-            border: 4px solid rgba(255,255,255,0.3) !important;
+            max-width: 90% !important;
+            width: 380px !important;
+            animation: scaleInOverlay 0.4s ease !important;
+            pointer-events: auto !important;
           `;
           
           message.innerHTML = `
-            <div style="font-size: 120px; margin-bottom: 35px; animation: bounceBlack 2s ease infinite;">✅</div>
-            <h2 style="margin: 0 0 30px 0; color: white; font-size: 42px; font-weight: bold; text-shadow: 0 3px 15px rgba(0,0,0,0.4); font-family: Arial, sans-serif;">Missão Completa!</h2>
-            <p style="margin: 0 0 25px 0; color: rgba(255,255,255,0.95); font-size: 26px; line-height: 1.7; font-family: Arial, sans-serif;">
-              Você completou <strong style="color: #ffd700; font-size: 30px; text-shadow: 0 2px 10px rgba(255,215,0,0.5);">${MAX_CLICKS} clicks</strong> no anúncio.
+            <div style="width: 60px; height: 60px; margin: 0 auto 20px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+            <h2 style="margin: 0 0 12px 0; color: #1f2937; font-size: 22px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">Missão Concluída</h2>
+            <p style="margin: 0 0 20px 0; color: #6b7280; font-size: 14px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+              Você completou <strong style="color: #1f2937;">${totalClicks} cliques</strong> com sucesso.
             </p>
-            <p style="margin: 0 0 40px 0; color: rgba(255,255,255,0.85); font-size: 24px; font-family: Arial, sans-serif;">
-              Parabéns! Sua recompensa foi creditada.
-            </p>
-            <button onclick="window.history.back()" style="
-              padding: 25px 70px !important;
-              background: white !important;
-              color: #667eea !important;
-              border: none !important;
-              border-radius: 18px !important;
-              font-size: 26px !important;
-              font-weight: bold !important;
-              cursor: pointer !important;
-              transition: all 0.3s ease !important;
-              box-shadow: 0 12px 35px rgba(0,0,0,0.4) !important;
-              font-family: Arial, sans-serif !important;
-            " onmouseover="this.style.transform='translateY(-6px) scale(1.08)'; this.style.boxShadow='0 18px 45px rgba(0,0,0,0.5)'" onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='0 12px 35px rgba(0,0,0,0.4)'">
-              ← Voltar ao Início
-            </button>
+            <div style="padding: 12px 16px; background: #f3f4f6; border-radius: 8px;">
+              <p id="countdown-text" style="margin: 0; color: #4b5563; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                Aguardando...
+              </p>
+            </div>
           `;
           
           overlay.appendChild(message);
-          document.body.appendChild(overlay);
           
-          // Adicionar animações CSS
-          if (!document.getElementById('postback-blocker-animations')) {
+          // Adicionar ao HTML (não ao body) para ficar acima de TUDO
+          document.documentElement.appendChild(overlay);
+          
+          // Adicionar animações CSS (SEM desabilitar iframes globalmente)
+          if (!document.getElementById('api-click-overlay-animations')) {
             const style = document.createElement('style');
-            style.id = 'postback-blocker-animations';
+            style.id = 'api-click-overlay-animations';
             style.textContent = `
-              @keyframes fadeInBlack {
+              @keyframes fadeInOverlay {
                 from { opacity: 0; }
                 to { opacity: 1; }
               }
-              @keyframes scaleInBlack {
-                from { opacity: 0; transform: scale(0.5) translateY(60px) rotate(-8deg); }
-                to { opacity: 1; transform: scale(1) translateY(0) rotate(0deg); }
+              @keyframes scaleInOverlay {
+                from { opacity: 0; transform: scale(0.95) translateY(10px); }
+                to { opacity: 1; transform: scale(1) translateY(0); }
               }
-              @keyframes bounceBlack {
-                0%, 100% { transform: translateY(0) scale(1); }
-                50% { transform: translateY(-25px) scale(1.15); }
+              @keyframes fadeOutOverlay {
+                from { opacity: 1; }
+                to { opacity: 0; }
+              }
+              #api-click-overlay {
+                z-index: 2147483647 !important;
+                position: fixed !important;
               }
             `;
             document.head.appendChild(style);
           }
           
-          console.log('[POSTBACK INTERCEPTOR] ✅ Overlay preto criado e ativo');
-        }
-        
-        // Interceptar fetch (postback do Monetag)
-        const originalFetch = window.fetch;
-        window.fetch = function(...args) {
-          const url = args[0];
-          
-          if (typeof url === 'string' && url.includes('postback')) {
-            const urlObj = new URL(url);
-            const eventType = urlObj.searchParams.get('event_type') || 'unknown';
+          // FUNÇÃO SIMPLES PARA MANTER OVERLAY NO TOPO
+          function keepOverlayOnTop() {
+            const overlayEl = document.getElementById('api-click-overlay');
+            if (!overlayEl) return;
             
-            if (eventType === 'click') {
-              clickCount++;
-              console.log('[POSTBACK INTERCEPTOR] Click detectado! Total: ' + clickCount + '/' + MAX_CLICKS);
-              
-              if (clickCount > MAX_CLICKS) {
-                console.log('[POSTBACK INTERCEPTOR] ❌ Click BLOQUEADO - limite excedido');
-                return Promise.resolve(new Response('blocked', { status: 200 }));
-              }
-              
-              if (clickCount === MAX_CLICKS) {
-                console.log('[POSTBACK INTERCEPTOR] ⚠️ Último click permitido - ativando bloqueio...');
-                setTimeout(createBlackOverlay, 500);
-              }
+            // Garantir que está no final do documento
+            if (overlayEl.parentNode !== document.documentElement || overlayEl !== document.documentElement.lastElementChild) {
+              document.documentElement.appendChild(overlayEl);
             }
+            
+            // Forçar z-index máximo
+            overlayEl.style.zIndex = '2147483647';
           }
           
-          return originalFetch.apply(this, args);
-        };
-        
-        // Interceptar XMLHttpRequest (fallback)
-        const originalOpen = XMLHttpRequest.prototype.open;
-        XMLHttpRequest.prototype.open = function(method, url, ...rest) {
-          if (typeof url === 'string' && url.includes('postback')) {
-            const urlObj = new URL(url, window.location.href);
-            const eventType = urlObj.searchParams.get('event_type') || 'unknown';
+          // Executar a cada 200ms (menos agressivo)
+          setInterval(keepOverlayOnTop, 200);
+          
+          console.log('[API CLICK CHECKER] ✅ Tela flutuante transparente criada');
+          console.log('[API CLICK CHECKER] ✅ Sistema de proteção de overlay ativado');
+          
+          // CONTADOR DE 20 SEGUNDOS - SÓ COMEÇA QUANDO DETECTAR TELA DO ANÚCIO
+          let countdown = 20;
+          let countdownStarted = false;
+          let countdownInterval = null;
+          const countdownTextElement = document.getElementById('countdown-text');
+          
+          function startCountdown() {
+            if (countdownStarted) return;
+            countdownStarted = true;
             
-            if (eventType === 'click') {
-              clickCount++;
-              console.log('[POSTBACK INTERCEPTOR XHR] Click detectado! Total: ' + clickCount + '/' + MAX_CLICKS);
+            console.log('[COUNTDOWN] Tela de anúncio detectada! Iniciando contador de 20 segundos...');
+            
+            // Atualizar texto para mostrar o contador
+            if (countdownTextElement) {
+              countdownTextElement.innerHTML = 'Recarregando em <span id="countdown-timer" style="color: #1f2937; font-size: 18px; font-weight: 600;">20</span> segundos';
+            }
+            
+            countdownInterval = setInterval(function() {
+              countdown--;
+              const timerElement = document.getElementById('countdown-timer');
+              if (timerElement) {
+                timerElement.textContent = countdown;
+              }
+              console.log('[COUNTDOWN] ' + countdown + ' segundos restantes...');
               
-              if (clickCount > MAX_CLICKS) {
-                console.log('[POSTBACK INTERCEPTOR XHR] ❌ Click BLOQUEADO - limite excedido');
+              if (countdown <= 0) {
+                clearInterval(countdownInterval);
+                console.log('[COUNTDOWN] Tempo esgotado! Recarregando página...');
+                window.location.reload();
+              }
+            }, 1000);
+          }
+          
+          // DETECTAR QUANDO A TELA DO ANÚCIO APARECE
+          function checkForAdScreen() {
+            // Verificar se existe algum elemento do Monetag/anúncio na página
+            const adIndicators = [
+              'iframe[src*="monetag"]',
+              'iframe[src*="ad"]',
+              '[class*="monetag"]',
+              '[id*="monetag"]',
+              'div[style*="z-index: 2147483647"]',
+              'iframe[style*="z-index"]'
+            ];
+            
+            for (let selector of adIndicators) {
+              const elements = document.querySelectorAll(selector);
+              if (elements.length > 0) {
+                startCountdown();
+                return true;
+              }
+            }
+            
+            // Também verificar se há iframes novos que podem ser anúncios
+            const iframes = document.querySelectorAll('iframe');
+            if (iframes.length > 0) {
+              // Se tem iframe, provavelmente é anúncio
+              startCountdown();
+              return true;
+            }
+            
+            return false;
+          }
+          
+          // Verificar imediatamente e a cada 500ms
+          checkForAdScreen();
+          const adCheckInterval = setInterval(function() {
+            if (checkForAdScreen()) {
+              clearInterval(adCheckInterval);
+            }
+          }, 500);
+          
+          // Também iniciar contador após 2 segundos como fallback
+          setTimeout(function() {
+            if (!countdownStarted) {
+              console.log('[COUNTDOWN] Fallback: iniciando contador após 2 segundos');
+              startCountdown();
+            }
+          }, 2000);
+          
+          // INICIAR ANÚCIOS AUTOMÁTICOS
+          console.log('[AUTO AD] Iniciando anúncios automáticos...');
+          
+          // Clicar no botão de anúncio imediatamente
+          setTimeout(function() {
+            clickWatchAdButton();
+          }, 1000);
+          
+          // Continuar clicando periodicamente (a cada 30 segundos)
+          setInterval(function() {
+            console.log('[AUTO AD] Tentando abrir novo anúncio...');
+            clickWatchAdButton();
+          }, 30000);
+        }
+        
+        // Função para verificar a API
+        async function checkApiClicks() {
+          const userId = getUserId();
+          
+          if (!userId) {
+            console.log('[API CLICK CHECKER] ⚠️ Nenhum ID de usuário encontrado na URL');
+            return;
+          }
+          
+          try {
+            const response = await fetch(API_BASE_URL + userId);
+            const data = await response.json();
+            
+            console.log('[API CLICK CHECKER] Resposta da API:', data);
+            
+            if (data.success) {
+              const totalClicks = data.total_clicks || 0;
+              const totalImpressions = data.total_impressions || 0;
+              
+              // Tarefa completa: impressões E cliques atingidos - não mostra diálogo
+              if (totalImpressions >= MAX_IMPRESSIONS && totalClicks >= MAX_CLICKS) {
+                console.log('[API CLICK CHECKER] Tarefa COMPLETA! ' + totalImpressions + '/' + MAX_IMPRESSIONS + ' impressões e ' + totalClicks + '/' + MAX_CLICKS + ' cliques. Diálogo não será exibido.');
                 return;
               }
               
-              if (clickCount === MAX_CLICKS) {
-                console.log('[POSTBACK INTERCEPTOR XHR] ⚠️ Último click permitido - ativando bloqueio...');
-                setTimeout(createBlackOverlay, 500);
+              // Se tem cliques suficientes mas ainda não completou as impressões, mostra o diálogo
+              if (totalClicks >= MAX_CLICKS) {
+                console.log('[API CLICK CHECKER] ⚠️ ' + totalClicks + ' clicks detectados! (limite: ' + MAX_CLICKS + ')');
+                createFloatingOverlay(totalClicks);
+              } else {
+                console.log('[API CLICK CHECKER] Clicks atuais: ' + totalClicks + '/' + MAX_CLICKS + ' | Impressões: ' + totalImpressions + '/' + MAX_IMPRESSIONS);
               }
             }
+          } catch (error) {
+            console.error('[API CLICK CHECKER] Erro ao verificar API:', error);
           }
-          
-          return originalOpen.apply(this, [method, url, ...rest]);
-        };
+        }
         
-        // Interceptar Image.src (pixel tracking)
-        const OriginalImage = window.Image;
-        window.Image = class extends OriginalImage {
-          set src(value) {
-            if (typeof value === 'string' && value.includes('postback')) {
-              const urlObj = new URL(value, window.location.href);
-              const eventType = urlObj.searchParams.get('event_type') || 'unknown';
-              
-              if (eventType === 'click') {
-                clickCount++;
-                console.log('[POSTBACK INTERCEPTOR IMG] Click detectado! Total: ' + clickCount + '/' + MAX_CLICKS);
-                
-                if (clickCount > MAX_CLICKS) {
-                  console.log('[POSTBACK INTERCEPTOR IMG] ❌ Click BLOQUEADO - limite excedido');
-                  return;
-                }
-                
-                if (clickCount === MAX_CLICKS) {
-                  console.log('[POSTBACK INTERCEPTOR IMG] ⚠️ Último click permitido - ativando bloqueio...');
-                  setTimeout(createBlackOverlay, 500);
-                }
-              }
-            }
+        // Função para iniciar a verificação contínua
+        function startChecking() {
+          if (checkInterval) return; // Já está verificando
+          
+          const userId = getUserId();
+          if (userId) {
+            console.log('[API CLICK CHECKER] ID do usuário encontrado: ' + userId);
+            console.log('[API CLICK CHECKER] Iniciando verificação periódica...');
             
-            super.src = value;
+            // Verificar imediatamente
+            checkApiClicks();
+            
+            // Verificar periodicamente
+            checkInterval = setInterval(checkApiClicks, CHECK_INTERVAL);
           }
-          
-          get src() {
-            return super.src;
-          }
-        };
+        }
         
-        console.log('[POSTBACK INTERCEPTOR] ✅ Interceptores instalados (fetch, XHR, Image)');
-        console.log('[POSTBACK INTERCEPTOR] Aguardando postbacks de click...');
+        // Verificar continuamente se o ID apareceu na tela
+        let idCheckInterval = null;
+        function waitForId() {
+          const userId = getUserId();
+          if (userId) {
+            console.log('[API CLICK CHECKER] ID detectado na tela: ' + userId);
+            if (idCheckInterval) {
+              clearInterval(idCheckInterval);
+              idCheckInterval = null;
+            }
+            startChecking();
+          } else {
+            console.log('[API CLICK CHECKER] Aguardando ID aparecer na tela...');
+          }
+        }
+        
+        // Iniciar verificação quando a página carregar
+        document.addEventListener('DOMContentLoaded', function() {
+          // Tentar imediatamente
+          waitForId();
+          
+          // Se não encontrou, continuar tentando
+          if (!checkInterval) {
+            idCheckInterval = setInterval(waitForId, ID_CHECK_INTERVAL);
+          }
+        });
+        
+        // Também verificar se o DOM já está pronto
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+          waitForId();
+          if (!checkInterval && !idCheckInterval) {
+            idCheckInterval = setInterval(waitForId, ID_CHECK_INTERVAL);
+          }
+        }
+        
+        // Observar mudanças no DOM para detectar quando a tela de tarefas aparecer
+        const observer = new MutationObserver(function(mutations) {
+          if (!checkInterval) {
+            const userId = getUserId();
+            if (userId) {
+              console.log('[API CLICK CHECKER] ID detectado via MutationObserver: ' + userId);
+              startChecking();
+              observer.disconnect();
+            }
+          }
+        });
+        
+        // Iniciar observação quando o body existir
+        if (document.body) {
+          observer.observe(document.body, { childList: true, subtree: true });
+        } else {
+          document.addEventListener('DOMContentLoaded', function() {
+            observer.observe(document.body, { childList: true, subtree: true });
+          });
+        }
+        
+        console.log('[API CLICK CHECKER] ✅ Sistema de verificação instalado');
       })();
     </script>
     <script id="manus-runtime">window.__MANUS_HOST_DEV__ = false;
