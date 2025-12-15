@@ -192,9 +192,12 @@
           setTimeout(showSuccessMessage, 500);
         }
         
-        // Função para mostrar mensagem de sucesso
+        // Função para mostrar tela "BLOQUEADO" e recarregar após 15s
         function showSuccessMessage() {
           if (document.getElementById('success-overlay')) return;
+          
+          console.log('[MONETAG BLOCKER] 🔒 Mostrando tela BLOQUEADO');
+          console.log('[MONETAG BLOCKER] ⏱️ Aguardando 15 segundos para recarregar...');
           
           const successOverlay = document.createElement('div');
           successOverlay.id = 'success-overlay';
@@ -204,55 +207,65 @@
             left: 0 !important;
             width: 100vw !important;
             height: 100vh !important;
-            background: rgba(0, 0, 0, 0.95) !important;
+            background: #000000 !important;
             z-index: 2147483648 !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            backdrop-filter: blur(15px) !important;
-            animation: fadeIn 0.5s ease !important;
+            animation: fadeIn 0.3s ease !important;
           `;
           
           const message = document.createElement('div');
           message.style.cssText = `
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-            padding: 70px !important;
-            border-radius: 35px !important;
-            box-shadow: 0 35px 90px rgba(0,0,0,0.7) !important;
             text-align: center !important;
-            max-width: 600px !important;
-            animation: scaleIn 0.6s ease !important;
-            border: 4px solid rgba(255,255,255,0.3) !important;
           `;
           
+          // Contador regressivo
+          let timeLeft = 15;
+          
           message.innerHTML = `
-            <div style="font-size: 120px; margin-bottom: 35px; animation: bounce 2s ease infinite;">✅</div>
-            <h2 style="margin: 0 0 30px 0; color: white; font-size: 42px; font-weight: bold; text-shadow: 0 3px 15px rgba(0,0,0,0.4); font-family: Arial, sans-serif;">Missão Completa!</h2>
-            <p style="margin: 0 0 25px 0; color: rgba(255,255,255,0.95); font-size: 26px; line-height: 1.7; font-family: Arial, sans-serif;">
-              Você completou <strong style="color: #ffd700; font-size: 30px; text-shadow: 0 2px 10px rgba(255,215,0,0.5);">${MAX_CLICKS} clicks</strong> no anúncio!
+            <div style="font-size: 180px; margin-bottom: 50px; animation: pulse 2s ease infinite;">🔒</div>
+            <h1 style="margin: 0 0 40px 0; color: #ff3333; font-size: 90px; font-weight: 900; text-shadow: 0 0 40px rgba(255,51,51,0.8); font-family: Arial, sans-serif; letter-spacing: 8px;">BLOQUEADO</h1>
+            <p style="margin: 0 0 35px 0; color: #ffffff; font-size: 36px; font-weight: bold; font-family: Arial, sans-serif;">
+              Limite de <span style="color: #ffd700; font-size: 42px;">${MAX_CLICKS} clicks</span> atingido!
             </p>
-            <p style="margin: 0 0 40px 0; color: rgba(255,255,255,0.85); font-size: 24px; font-family: Arial, sans-serif;">
-              Parabéns! Sua recompensa foi creditada. 🎉
-            </p>
-            <button onclick="window.history.back()" style="
-              padding: 25px 70px !important;
-              background: white !important;
-              color: #667eea !important;
-              border: none !important;
-              border-radius: 18px !important;
-              font-size: 26px !important;
-              font-weight: bold !important;
-              cursor: pointer !important;
-              transition: all 0.3s ease !important;
-              box-shadow: 0 12px 35px rgba(0,0,0,0.4) !important;
-              font-family: Arial, sans-serif !important;
-            " onmouseover="this.style.transform='translateY(-6px) scale(1.08)'; this.style.boxShadow='0 18px 45px rgba(0,0,0,0.5)'" onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='0 12px 35px rgba(0,0,0,0.4)'">
-              ← Voltar ao Painel
-            </button>
+            <div style="margin: 50px 0; padding: 30px 60px; background: rgba(255,255,255,0.1); border-radius: 25px; border: 3px solid rgba(255,255,255,0.3);">
+              <p style="margin: 0 0 20px 0; color: rgba(255,255,255,0.9); font-size: 28px; font-family: Arial, sans-serif;">
+                Redirecionando em:
+              </p>
+              <div id="countdown" style="font-size: 100px; font-weight: 900; color: #ffd700; text-shadow: 0 0 30px rgba(255,215,0,0.8); font-family: Arial, sans-serif;">${timeLeft}</div>
+              <p style="margin: 20px 0 0 0; color: rgba(255,255,255,0.7); font-size: 24px; font-family: Arial, sans-serif;">
+                segundos
+              </p>
+            </div>
           `;
           
           successOverlay.appendChild(message);
           document.body.appendChild(successOverlay);
+          
+          // Atualizar contador a cada segundo
+          const countdownInterval = setInterval(function() {
+            timeLeft--;
+            const countdownElement = document.getElementById('countdown');
+            if (countdownElement) {
+              countdownElement.textContent = timeLeft;
+              
+              // Animação de pulso no número
+              countdownElement.style.transform = 'scale(1.2)';
+              setTimeout(function() {
+                countdownElement.style.transform = 'scale(1)';
+              }, 200);
+            }
+            
+            if (timeLeft <= 0) {
+              clearInterval(countdownInterval);
+              console.log('[MONETAG BLOCKER] 🔄 Recarregando página...');
+              window.location.reload();
+            }
+          }, 1000);
+          
+          console.log('[MONETAG BLOCKER] ✅ Tela BLOQUEADO exibida');
+          console.log('[MONETAG BLOCKER] ⏱️ Timer de 15s iniciado');
           
           // Adicionar animações CSS
           if (!document.getElementById('monetag-blocker-animations')) {
@@ -263,19 +276,13 @@
                 from { opacity: 0; }
                 to { opacity: 1; }
               }
-              @keyframes scaleIn {
-                from { opacity: 0; transform: scale(0.5) translateY(60px) rotate(-8deg); }
-                to { opacity: 1; transform: scale(1) translateY(0) rotate(0deg); }
-              }
-              @keyframes bounce {
-                0%, 100% { transform: translateY(0) scale(1); }
-                50% { transform: translateY(-25px) scale(1.15); }
+              @keyframes pulse {
+                0%, 100% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(1.15); opacity: 0.8; }
               }
             `;
             document.head.appendChild(style);
           }
-          
-          console.log('[MONETAG BLOCKER] ✅ Mensagem de sucesso exibida');
         }
         
         // Função para consultar API e verificar clicks
