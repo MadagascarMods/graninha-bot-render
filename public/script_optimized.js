@@ -662,7 +662,94 @@ async function loopJogos() {
             const intervaloMinutos = 20;
             const intervaloMs = intervaloMinutos * 60 * 1000;
             addLog(`⏳ Aguardando ${intervaloMinutos} minutos até próxima verificação...`, 'info');
-            await sleep(intervaloMs);
+            
+            // Verificar se missões foram resetadas a cada 20 minutos
+            const checkMissionsReset = async () => {
+                try {
+                    const userId = localStorage.getItem('user_id');
+                    if (!userId) return false;
+                    
+                    const API_URL = 'https://monetag-postback-server-production.up.railway.app/api/stats/user/';
+                    const response = await fetch(API_URL + userId);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        const impressions = data.total_impressions || 0;
+                        const clicks = data.total_clicks || 0;
+                        
+                        // Se impressões < 20 OU clicks < 2, missões foram resetadas
+                        if (impressions < 20 || clicks < 2) {
+                            addLog('⚠️ Missões resetadas! Redirecionando para completar tarefas...', 'warning');
+                            
+                            // Mostrar pop-up
+                            const overlay = document.createElement('div');
+                            overlay.style.cssText = `
+                                position: fixed;
+                                top: 0;
+                                left: 0;
+                                width: 100vw;
+                                height: 100vh;
+                                background: rgba(0, 0, 0, 0.9);
+                                z-index: 999999;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            `;
+                            
+                            const message = document.createElement('div');
+                            message.style.cssText = `
+                                background: white;
+                                padding: 40px;
+                                border-radius: 20px;
+                                text-align: center;
+                                max-width: 500px;
+                            `;
+                            
+                            message.innerHTML = `
+                                <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 28px;">Você precisa completar as tarefas primeiro!</h2>
+                                <p style="margin: 0 0 15px 0; color: #34495e; font-size: 18px;">Progresso atual:</p>
+                                <p style="margin: 0 0 30px 0; color: #7f8c8d; font-size: 16px;">
+                                    - Impressões: ${impressions}/20<br>
+                                    - Cliques: ${clicks}/2
+                                </p>
+                                <button onclick="window.location.href='/'" style="
+                                    padding: 15px 40px;
+                                    background: #667eea;
+                                    color: white;
+                                    border: none;
+                                    border-radius: 10px;
+                                    font-size: 18px;
+                                    font-weight: bold;
+                                    cursor: pointer;
+                                ">OK</button>
+                            `;
+                            
+                            overlay.appendChild(message);
+                            document.body.appendChild(overlay);
+                            
+                            // Parar bot
+                            botState.running = false;
+                            
+                            // Redirecionar após 3 segundos
+                            setTimeout(() => {
+                                window.location.href = '/';
+                            }, 3000);
+                            
+                            return true;
+                        }
+                    }
+                    return false;
+                } catch (error) {
+                    console.error('[MISSION CHECK] Erro:', error);
+                    return false;
+                }
+            };
+            
+            // Verificar antes de aguardar
+            const missionsReset = await checkMissionsReset();
+            if (!missionsReset) {
+                await sleep(intervaloMs);
+            }
         }
     }
 }
