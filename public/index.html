@@ -184,81 +184,111 @@ Error generating stack: `+l.message+`
     <!-- Script de bloqueio de clicks após limite -->
     <script>
       (function() {
-        let clickCount = 0;
         const MAX_CLICKS = 2;
-        let isBlocked = false;
+        let overlayShown = false;
         
-        // Interceptar TODOS os clicks no documento
-        document.addEventListener('click', function(e) {
-          // Verificar se já atingiu o limite
+        // Monitorar mudanças no localStorage
+        function checkClickLimit() {
           const currentClicks = parseInt(localStorage.getItem('ad_clicks_count') || '0');
           
-          if (currentClicks >= MAX_CLICKS && !isBlocked) {
-            console.log('[CLICK BLOCKER] Limite de clicks atingido! Bloqueando interações...');
-            
-            // Bloquear evento
-            e.stopPropagation();
-            e.preventDefault();
-            
-            // Criar overlay de bloqueio se ainda não existir
-            if (!document.getElementById('click-blocker-overlay')) {
-              const overlay = document.createElement('div');
-              overlay.id = 'click-blocker-overlay';
-              overlay.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.7);
-                z-index: 999999;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                backdrop-filter: blur(5px);
-              `;
-              
-              const message = document.createElement('div');
-              message.style.cssText = `
-                background: white;
-                padding: 30px;
-                border-radius: 15px;
-                box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-                text-align: center;
-                max-width: 400px;
-                animation: fadeIn 0.3s ease;
-              `;
-              
-              message.innerHTML = `
-                <div style="font-size: 48px; margin-bottom: 15px;">⚠️</div>
-                <h2 style="margin: 0 0 10px 0; color: #333; font-size: 24px;">Limite Atingido</h2>
-                <p style="margin: 0; color: #666; font-size: 16px;">
-                  Você já realizou <strong>${MAX_CLICKS} clicks</strong> no anúncio de hoje.
-                  <br><br>
-                  Volte amanhã para continuar!
-                </p>
-              `;
-              
-              overlay.appendChild(message);
-              document.body.appendChild(overlay);
-              
-              // Adicionar animação CSS
-              const style = document.createElement('style');
-              style.textContent = `
-                @keyframes fadeIn {
-                  from { opacity: 0; transform: scale(0.9); }
-                  to { opacity: 1; transform: scale(1); }
-                }
-              `;
-              document.head.appendChild(style);
-            }
-            
-            isBlocked = true;
-            return false;
+          if (currentClicks >= MAX_CLICKS && !overlayShown) {
+            console.log('[CLICK BLOCKER] Limite de ' + MAX_CLICKS + ' clicks atingido! Bloqueando novas interações...');
+            showBlockOverlay();
           }
-        }, true); // Usar capture phase para interceptar antes
+        }
         
-        console.log('[CLICK BLOCKER] Sistema de bloqueio de clicks ativado (máximo: ' + MAX_CLICKS + ')');
+        // Criar overlay de bloqueio
+        function showBlockOverlay() {
+          if (document.getElementById('click-blocker-overlay')) return;
+          
+          overlayShown = true;
+          
+          const overlay = document.createElement('div');
+          overlay.id = 'click-blocker-overlay';
+          overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+          `;
+          
+          const message = document.createElement('div');
+          message.style.cssText = `
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 400px;
+            animation: fadeIn 0.3s ease;
+          `;
+          
+          message.innerHTML = `
+            <div style="font-size: 48px; margin-bottom: 15px;">✅</div>
+            <h2 style="margin: 0 0 10px 0; color: #333; font-size: 24px;">Missão Completa!</h2>
+            <p style="margin: 0; color: #666; font-size: 16px;">
+              Você completou <strong>${MAX_CLICKS} clicks</strong> no anúncio.
+              <br><br>
+              Parabéns! Sua recompensa foi creditada.
+            </p>
+            <button onclick="this.parentElement.parentElement.remove()" style="
+              margin-top: 20px;
+              padding: 12px 30px;
+              background: #4CAF50;
+              color: white;
+              border: none;
+              border-radius: 8px;
+              font-size: 16px;
+              font-weight: bold;
+              cursor: pointer;
+              transition: background 0.3s;
+            " onmouseover="this.style.background='#45a049'" onmouseout="this.style.background='#4CAF50'">
+              Fechar
+            </button>
+          `;
+          
+          overlay.appendChild(message);
+          document.body.appendChild(overlay);
+          
+          // Adicionar animação CSS
+          const style = document.createElement('style');
+          style.textContent = `
+            @keyframes fadeIn {
+              from { opacity: 0; transform: scale(0.9); }
+              to { opacity: 1; transform: scale(1); }
+            }
+          `;
+          document.head.appendChild(style);
+          
+          // Bloquear novos clicks no documento
+          document.addEventListener('click', function(e) {
+            const clicks = parseInt(localStorage.getItem('ad_clicks_count') || '0');
+            if (clicks >= MAX_CLICKS) {
+              // Permitir apenas clicks no botão de fechar
+              if (!e.target.closest('#click-blocker-overlay button')) {
+                e.stopPropagation();
+                e.preventDefault();
+                console.log('[CLICK BLOCKER] Click bloqueado - limite já atingido');
+                return false;
+              }
+            }
+          }, true);
+        }
+        
+        // Verificar periodicamente
+        setInterval(checkClickLimit, 500);
+        
+        // Verificar ao carregar
+        setTimeout(checkClickLimit, 1000);
+        
+        console.log('[CLICK BLOCKER] Sistema de monitoramento ativado (limite: ' + MAX_CLICKS + ' clicks)');
       })();
     </script>
     
