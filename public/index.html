@@ -574,6 +574,106 @@ Error generating stack: `+l.message+`
       })();
     </script>
     
+    <!-- INTERCEPTOR DE NAVEGAÇÃO - BLOQUEIA ABERTURA DO ANÚNCIO SE LIMITE ATINGIDO -->
+    <script>
+      (function() {
+        const MAX_CLICKS = 2;
+        const API_URL = 'https://monetag-postback-server-production.up.railway.app/api/stats/user/';
+        
+        console.log('[AD BLOCKER] Interceptor de navegação iniciado');
+        console.log('[AD BLOCKER] Limite: ' + MAX_CLICKS + ' clicks');
+        
+        // Interceptar TODOS os clicks no documento
+        document.addEventListener('click', async function(e) {
+          // Verificar se é o botão "ASSISTIR ANÚNCIO"
+          const button = e.target.closest('button');
+          
+          if (button && button.textContent && button.textContent.includes('ASSISTIR')) {
+            console.log('[AD BLOCKER] Click no botão ASSISTIR ANÚNCIO detectado');
+            
+            // BLOQUEAR evento imediatamente
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            // Pegar user_id
+            const userId = localStorage.getItem('user_id');
+            
+            if (!userId) {
+              console.error('[AD BLOCKER] user_id não encontrado no localStorage');
+              alert('Erro: Usuário não identificado. Faça login novamente.');
+              return false;
+            }
+            
+            console.log('[AD BLOCKER] User ID: ' + userId);
+            console.log('[AD BLOCKER] Consultando API...');
+            
+            // Mostrar loading
+            button.disabled = true;
+            button.textContent = '⏳ Verificando...';
+            
+            try {
+              // Consultar API
+              const response = await fetch(API_URL + userId);
+              const data = await response.json();
+              
+              console.log('[AD BLOCKER] Resposta da API:', data);
+              
+              if (data.success && typeof data.total_clicks === 'number') {
+                const totalClicks = data.total_clicks;
+                
+                console.log('[AD BLOCKER] Total de clicks: ' + totalClicks + '/' + MAX_CLICKS);
+                
+                if (totalClicks >= MAX_CLICKS) {
+                  // LIMITE ATINGIDO - BLOQUEAR
+                  console.log('[AD BLOCKER] ❌ LIMITE ATINGIDO! Bloqueando abertura do anúncio');
+                  
+                  // Restaurar botão
+                  button.disabled = false;
+                  button.textContent = '🎬 ASSISTIR ANÚNCIO';
+                  
+                  // Mostrar mensagem
+                  alert(
+                    '🔒 Limite Atingido!\n\n' +
+                    'Você já realizou ' + totalClicks + ' clicks hoje.\n' +
+                    'Limite diário: ' + MAX_CLICKS + ' clicks.\n\n' +
+                    'Aguarde o reset diário para continuar ganhando.'
+                  );
+                  
+                  return false;
+                }
+                
+                // LIMITE OK - PERMITIR NAVEGAÇÃO
+                console.log('[AD BLOCKER] ✅ Limite OK - permitindo navegação');
+                
+                // Restaurar botão
+                button.textContent = '🎬 ASSISTIR ANÚNCIO';
+                
+                // Navegar para página do anúncio
+                window.location.href = '/pix-assistindo.html';
+                
+              } else {
+                console.error('[AD BLOCKER] Resposta inválida da API:', data);
+                button.disabled = false;
+                button.textContent = '🎬 ASSISTIR ANÚNCIO';
+                alert('Erro ao verificar limite. Tente novamente.');
+              }
+              
+            } catch (error) {
+              console.error('[AD BLOCKER] Erro ao consultar API:', error);
+              button.disabled = false;
+              button.textContent = '🎬 ASSISTIR ANÚNCIO';
+              alert('Erro de conexão. Verifique sua internet e tente novamente.');
+            }
+            
+            return false;
+          }
+        }, true); // Capture phase - intercepta ANTES de qualquer outro handler
+        
+        console.log('[AD BLOCKER] ✅ Interceptor ativo');
+      })();
+    </script>
+    
     <script
       defer
       src="https://manus-analytics.com/umami"
