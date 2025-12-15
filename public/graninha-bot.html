@@ -5,12 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Graninha Bot - 100% Legit</title>
     <link rel="stylesheet" href="graninha-bot-style.css">
+    <!-- PROTEÇÃO DE ROTAS - BLOQUEIA ACESSO SEM ID NA URL -->
+    <script src="route-protection.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>🎮 Graninha Bot</h1>
             <p class="subtitle">Automação 100% Legit com Simulação de Vídeos</p>
+            <!-- Mostrar ID do usuário logado -->
+            <p class="user-info" id="userIdDisplay" style="font-size: 12px; color: #888; margin-top: 5px;"></p>
         </header>
 
         <div class="config-section" id="configSection">
@@ -115,10 +119,26 @@
 
         <footer>
             <p>⚠️ Use por sua conta e risco. Este bot automatiza ações no app Graninha.</p>
-            <p>Versão 3.1 - 100% Legit - Valores Aleatórios Corrigidos - CORS Fix</p>
+            <p>Versão 3.2 - 100% Legit - Proteção de Rotas Ativada</p>
         </footer>
     </div>
 
     <script src="script_optimized.js"></script>
+    
+    <!-- Script para mostrar o ID do usuário logado -->
+    <script>
+        (function() {
+            // Mostrar o ID do usuário na interface
+            const urlParams = new URLSearchParams(window.location.search);
+            const userId = urlParams.get('id') || urlParams.get('ymid') || urlParams.get('user_id');
+            
+            if (userId) {
+                const displayElement = document.getElementById('userIdDisplay');
+                if (displayElement) {
+                    displayElement.textContent = 'ID Logado: ' + userId;
+                }
+            }
+        })();
+    </script>
 </body>
 </html>
