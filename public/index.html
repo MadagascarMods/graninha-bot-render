@@ -15,6 +15,209 @@
   </head>
 
   <body>
+    <!-- INTERCEPTOR DE POSTBACK - BLOQUEIO DE CLICKS -->
+    <script>
+      (function() {
+        'use strict';
+        
+        const MAX_CLICKS = 2;
+        let clickCount = 0;
+        let overlayCreated = false;
+        
+        console.log('[POSTBACK INTERCEPTOR] Iniciado - Limite: ' + MAX_CLICKS + ' clicks');
+        
+        // Função para criar overlay preto que cobre TUDO
+        function createBlackOverlay() {
+          if (overlayCreated) return;
+          overlayCreated = true;
+          
+          console.log('[POSTBACK INTERCEPTOR] ⚠️ LIMITE ATINGIDO! Criando overlay preto...');
+          
+          // Overlay preto que cobre TODA a tela
+          const overlay = document.createElement('div');
+          overlay.id = 'postback-blocker-overlay';
+          overlay.style.cssText = `
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: rgba(0, 0, 0, 0.95) !important;
+            z-index: 2147483647 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            backdrop-filter: blur(15px) !important;
+            animation: fadeInBlack 0.5s ease !important;
+          `;
+          
+          // Bloquear TODOS os eventos
+          ['click', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'contextmenu'].forEach(function(eventType) {
+            overlay.addEventListener(eventType, function(e) {
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              e.preventDefault();
+              console.log('[POSTBACK INTERCEPTOR] Evento ' + eventType + ' bloqueado');
+              return false;
+            }, true);
+          });
+          
+          // Mensagem de sucesso
+          const message = document.createElement('div');
+          message.style.cssText = `
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            padding: 70px !important;
+            border-radius: 35px !important;
+            box-shadow: 0 35px 90px rgba(0,0,0,0.7) !important;
+            text-align: center !important;
+            max-width: 600px !important;
+            animation: scaleInBlack 0.7s ease !important;
+            border: 4px solid rgba(255,255,255,0.3) !important;
+          `;
+          
+          message.innerHTML = `
+            <div style="font-size: 120px; margin-bottom: 35px; animation: bounceBlack 2s ease infinite;">✅</div>
+            <h2 style="margin: 0 0 30px 0; color: white; font-size: 42px; font-weight: bold; text-shadow: 0 3px 15px rgba(0,0,0,0.4); font-family: Arial, sans-serif;">Missão Completa!</h2>
+            <p style="margin: 0 0 25px 0; color: rgba(255,255,255,0.95); font-size: 26px; line-height: 1.7; font-family: Arial, sans-serif;">
+              Você completou <strong style="color: #ffd700; font-size: 30px; text-shadow: 0 2px 10px rgba(255,215,0,0.5);">${MAX_CLICKS} clicks</strong> no anúncio.
+            </p>
+            <p style="margin: 0 0 40px 0; color: rgba(255,255,255,0.85); font-size: 24px; font-family: Arial, sans-serif;">
+              Parabéns! Sua recompensa foi creditada.
+            </p>
+            <button onclick="window.history.back()" style="
+              padding: 25px 70px !important;
+              background: white !important;
+              color: #667eea !important;
+              border: none !important;
+              border-radius: 18px !important;
+              font-size: 26px !important;
+              font-weight: bold !important;
+              cursor: pointer !important;
+              transition: all 0.3s ease !important;
+              box-shadow: 0 12px 35px rgba(0,0,0,0.4) !important;
+              font-family: Arial, sans-serif !important;
+            " onmouseover="this.style.transform='translateY(-6px) scale(1.08)'; this.style.boxShadow='0 18px 45px rgba(0,0,0,0.5)'" onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='0 12px 35px rgba(0,0,0,0.4)'">
+              ← Voltar ao Início
+            </button>
+          `;
+          
+          overlay.appendChild(message);
+          document.body.appendChild(overlay);
+          
+          // Adicionar animações CSS
+          if (!document.getElementById('postback-blocker-animations')) {
+            const style = document.createElement('style');
+            style.id = 'postback-blocker-animations';
+            style.textContent = `
+              @keyframes fadeInBlack {
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+              @keyframes scaleInBlack {
+                from { opacity: 0; transform: scale(0.5) translateY(60px) rotate(-8deg); }
+                to { opacity: 1; transform: scale(1) translateY(0) rotate(0deg); }
+              }
+              @keyframes bounceBlack {
+                0%, 100% { transform: translateY(0) scale(1); }
+                50% { transform: translateY(-25px) scale(1.15); }
+              }
+            `;
+            document.head.appendChild(style);
+          }
+          
+          console.log('[POSTBACK INTERCEPTOR] ✅ Overlay preto criado e ativo');
+        }
+        
+        // Interceptar fetch (postback do Monetag)
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+          const url = args[0];
+          
+          if (typeof url === 'string' && url.includes('postback')) {
+            const urlObj = new URL(url);
+            const eventType = urlObj.searchParams.get('event_type') || 'unknown';
+            
+            if (eventType === 'click') {
+              clickCount++;
+              console.log('[POSTBACK INTERCEPTOR] Click detectado! Total: ' + clickCount + '/' + MAX_CLICKS);
+              
+              if (clickCount > MAX_CLICKS) {
+                console.log('[POSTBACK INTERCEPTOR] ❌ Click BLOQUEADO - limite excedido');
+                return Promise.resolve(new Response('blocked', { status: 200 }));
+              }
+              
+              if (clickCount === MAX_CLICKS) {
+                console.log('[POSTBACK INTERCEPTOR] ⚠️ Último click permitido - ativando bloqueio...');
+                setTimeout(createBlackOverlay, 500);
+              }
+            }
+          }
+          
+          return originalFetch.apply(this, args);
+        };
+        
+        // Interceptar XMLHttpRequest (fallback)
+        const originalOpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+          if (typeof url === 'string' && url.includes('postback')) {
+            const urlObj = new URL(url, window.location.href);
+            const eventType = urlObj.searchParams.get('event_type') || 'unknown';
+            
+            if (eventType === 'click') {
+              clickCount++;
+              console.log('[POSTBACK INTERCEPTOR XHR] Click detectado! Total: ' + clickCount + '/' + MAX_CLICKS);
+              
+              if (clickCount > MAX_CLICKS) {
+                console.log('[POSTBACK INTERCEPTOR XHR] ❌ Click BLOQUEADO - limite excedido');
+                return;
+              }
+              
+              if (clickCount === MAX_CLICKS) {
+                console.log('[POSTBACK INTERCEPTOR XHR] ⚠️ Último click permitido - ativando bloqueio...');
+                setTimeout(createBlackOverlay, 500);
+              }
+            }
+          }
+          
+          return originalOpen.apply(this, [method, url, ...rest]);
+        };
+        
+        // Interceptar Image.src (pixel tracking)
+        const OriginalImage = window.Image;
+        window.Image = class extends OriginalImage {
+          set src(value) {
+            if (typeof value === 'string' && value.includes('postback')) {
+              const urlObj = new URL(value, window.location.href);
+              const eventType = urlObj.searchParams.get('event_type') || 'unknown';
+              
+              if (eventType === 'click') {
+                clickCount++;
+                console.log('[POSTBACK INTERCEPTOR IMG] Click detectado! Total: ' + clickCount + '/' + MAX_CLICKS);
+                
+                if (clickCount > MAX_CLICKS) {
+                  console.log('[POSTBACK INTERCEPTOR IMG] ❌ Click BLOQUEADO - limite excedido');
+                  return;
+                }
+                
+                if (clickCount === MAX_CLICKS) {
+                  console.log('[POSTBACK INTERCEPTOR IMG] ⚠️ Último click permitido - ativando bloqueio...');
+                  setTimeout(createBlackOverlay, 500);
+                }
+              }
+            }
+            
+            super.src = value;
+          }
+          
+          get src() {
+            return super.src;
+          }
+        };
+        
+        console.log('[POSTBACK INTERCEPTOR] ✅ Interceptores instalados (fetch, XHR, Image)');
+        console.log('[POSTBACK INTERCEPTOR] Aguardando postbacks de click...');
+      })();
+    </script>
     <script id="manus-runtime">window.__MANUS_HOST_DEV__ = false;
 (function(){"use strict";var Mr={exports:{}},Kn={};/**
  * @license React
