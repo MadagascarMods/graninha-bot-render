@@ -3,235 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graninha Bot - Automação</title>
-    <link rel="stylesheet" href="pix-style.css">
-    <meta name="theme-color" content="#10b981">
-    <meta name="description" content="Automação de Jogos, Raspadinhas, Roleta e Quiz do Graninha">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%2310b981'/%3E%3Ctext x='50' y='60' text-anchor='middle' fill='white' font-size='40' font-family='Arial'%3EG%3C/text%3E%3C/svg%3E">
+    <title>Graninha Bot - 100% Legit</title>
+    <link rel="stylesheet" href="graninha-bot-style.css">
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <div class="logo">
-                    <div class="logo-icon">🎮</div>
-                    <h1>Graninha Bot</h1>
-                </div>
-                <div class="status-indicator">
-                    <div id="statusDot" class="status-dot stopped"></div>
-                    <span id="statusText" class="status-text">Parado</span>
-                </div>
-                <div class="timer-display" style="background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 12px; margin-left: 16px;">
-                    <span style="font-size: 14px; opacity: 0.8;">Tempo de Uso:</span>
-                    <span id="sessionTimer" style="font-size: 18px; font-weight: bold; margin-left: 8px;">00:00:00</span>
-                </div>
-            </div>
+        <header>
+            <h1>🎮 Graninha Bot</h1>
+            <p class="subtitle">Automação 100% Legit com Simulação de Vídeos</p>
         </header>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Configuration Panel -->
-            <section class="config-panel">
-                <h2>Configuração</h2>
+        <div class="config-section" id="configSection">
+            <h2>⚙️ Configuração</h2>
+            <form id="configForm">
                 <div class="form-group">
                     <label for="bearerToken">Bearer Token:</label>
-                    <input type="text" id="bearerToken" placeholder="Ex: 519800jYlxuAVV3BzcWqjkolsoo31MtlDquv2EUBerTC82K" required>
-                    <small style="color: #6b7280; font-size: 0.875rem; margin-top: 4px; display: block;">Obtenha usando HTTP Catcher no app Graninha</small>
+                    <input 
+                        type="text" 
+                        id="bearerToken" 
+                        placeholder="519800|YIxuAVV3BzcWqjkolsoo31MtlDquv2EUBeiTC82K"
+                        required
+                    >
+                    <small>Obtenha usando HTTP Catcher no app Graninha</small>
                 </div>
+
                 <div class="form-group">
                     <label for="exId">EX ID:</label>
-                    <input type="text" id="exId" placeholder="Ex: 1147391867424495092601" required>
-                    <small style="color: #6b7280; font-size: 0.875rem; margin-top: 4px; display: block;">ID do usuário encontrado nas requisições</small>
+                    <input 
+                        type="text" 
+                        id="exId" 
+                        placeholder="114739186742449509260"
+                        required
+                    >
+                    <small>ID do usuário encontrado nas requisições</small>
                 </div>
-                <div class="form-group">
-                    <label for="interval">Intervalo entre jogos (segundos):</label>
-                    <div class="slider-container">
-                        <input type="range" id="interval" min="60" max="300" value="120" step="10">
-                        <span id="intervalValue" class="slider-value">120</span>
-                    </div>
-                </div>
-                <div class="control-buttons">
-                    <button id="startBtn" class="btn btn-primary">
-                        <span class="btn-icon">▶️</span>
-                        Iniciar Bot
-                    </button>
-                    <button id="stopBtn" class="btn btn-secondary" disabled>
-                        <span class="btn-icon">⏹️</span>
-                        Parar
-                    </button>
-                    <button id="clearBtn" class="btn btn-outline">
-                        <span class="btn-icon">🗑️</span>
-                        Limpar Log
-                    </button>
 
-                </div>
-            </section>
+                <!-- Secret Key oculto (valor padrão) -->
+                <input type="hidden" id="secretKey" value="0NtCe2obYa13c3Bc1UEbVVj4p8IEDW">
 
-            <!-- Stats Panel -->
-            <section class="stats-panel">
-                <h2>Estatísticas</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon">🎮</div>
-                        <div class="stat-content">
-                            <div class="stat-value" id="requestCount">0</div>
-                            <div class="stat-label">Jogos Tentados</div>
-                        </div>
-                    </div>
-                    <div class="stat-card success">
-                        <div class="stat-icon">✅</div>
-                        <div class="stat-content">
-                            <div class="stat-value" id="successCount">0</div>
-                            <div class="stat-label">Vitórias</div>
-                        </div>
-                    </div>
-                    <div class="stat-card error">
-                        <div class="stat-icon">❌</div>
-                        <div class="stat-content">
-                            <div class="stat-value" id="errorCount">0</div>
-                            <div class="stat-label">Derrotas</div>
-                        </div>
-                    </div>
-                    <div class="stat-card money">
-                        <div class="stat-icon">💰</div>
-                        <div class="stat-content">
-                            <div class="stat-value" id="totalEarnings">R$ 0,00</div>
-                            <div class="stat-label">Total Ganho</div>
-                        </div>
-                    </div>
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="autoLoop" checked>
+                        Ativar loop infinito (intervalo realista de 5-15 minutos)
+                    </label>
                 </div>
-            </section>
 
-            <!-- User Info Panel -->
-            <section class="user-info-panel">
-                <h2>Informações do Usuário</h2>
-                <div id="userInfoContainer" class="user-info-container">
-                    <div class="user-info-empty">
-                        <span class="empty-icon">👤</span>
-                        <p>Inicie o bot para ver as informações do usuário</p>
-                    </div>
-                </div>
-            </section>
+                <button type="submit" class="btn btn-primary">
+                    🚀 Iniciar Bot
+                </button>
+            </form>
+        </div>
 
-            <!-- Mission Progress Panel -->
-            <section class="mission-panel">
-                <h2>Progresso de Jogos</h2>
-                <div id="missionContainer" class="mission-container">
-                    <div class="mission-empty">
-                        <span class="empty-icon">🎯</span>
-                        <p>Estatísticas de jogos aparecerão aqui após iniciar o bot</p>
-                    </div>
-                </div>
-            </section>
+        <div class="status-section" id="statusSection" style="display: none;">
+            <div class="status-header">
+                <h2>📊 Status</h2>
+                <button class="btn btn-secondary" id="stopBtn">⏹️ Parar</button>
+            </div>
 
-            <!-- Rewards Config Panel -->
-            <section class="rewards-panel">
-                <h2>Tipos de Jogos</h2>
-                <div id="rewardsContainer" class="rewards-container">
-                    <div class="rewards-empty">
-                        <span class="empty-icon">🎲</span>
-                        <p>Carregando tipos de jogos disponíveis...</p>
-                    </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Saldo Inicial</div>
+                    <div class="stat-value" id="saldoInicial">-</div>
                 </div>
-            </section>
+                <div class="stat-card">
+                    <div class="stat-label">Saldo Atual</div>
+                    <div class="stat-value" id="saldoAtual">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Ganho Total</div>
+                    <div class="stat-value success" id="ganhoTotal">+0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Ações Executadas</div>
+                    <div class="stat-value" id="acoesExecutadas">0</div>
+                </div>
+            </div>
 
-            <!-- Log Panel -->
-            <section class="log-panel">
-                <div class="log-header">
-                    <h2>Log de Atividades</h2>
-                    <button id="autoScrollBtn" class="btn btn-small active">Auto Scroll</button>
+            <div class="progress-section">
+                <h3>Progresso</h3>
+                <div class="progress-item">
+                    <span>Raspadinhas</span>
+                    <span id="progressRaspadinha">-</span>
                 </div>
-                <div id="logContainer" class="log-container">
-                    <div class="log-empty">
-                        <span class="log-empty-icon">📝</span>
-                        <p>Clique em "Iniciar Bot" para começar a automação do Graninha</p>
-                    </div>
+                <div class="progress-item">
+                    <span>Roleta</span>
+                    <span id="progressRoleta">-</span>
                 </div>
-            </section>
-        </main>
+                <div class="progress-item">
+                    <span>Quiz</span>
+                    <span id="progressQuiz">-</span>
+                </div>
+                <div class="progress-item">
+                    <span>Jogos (33 IDs)</span>
+                    <span id="progressJogos">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="logs-section">
+            <div class="logs-header">
+                <h2>📝 Logs</h2>
+                <button class="btn btn-small" id="clearLogsBtn">Limpar</button>
+            </div>
+            <div class="logs-container" id="logsContainer">
+                <div class="log-entry info">
+                    <span class="log-time">--:--:--</span>
+                    <span class="log-message">Aguardando configuração...</span>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>⚠️ Use por sua conta e risco. Este bot automatiza ações no app Graninha.</p>
+            <p>Versão 3.1 - 100% Legit - Valores Aleatórios Corrigidos - CORS Fix</p>
+        </footer>
     </div>
 
-    <script src="session-security.js"></script>
-    <script src="pix-script.js"></script>
-    
-    <script>
-        // Adaptação para Graninha Bot
-        document.addEventListener('DOMContentLoaded', function() {
-            // Pegar parâmetros da URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const userEmail = urlParams.get('email');
-            const userId = urlParams.get('userId');
-
-            console.log('[GRANINHA BOT] Email:', userEmail);
-            console.log('[GRANINHA BOT] User ID:', userId);
-
-            // Carregar configurações salvas
-            const savedBearerToken = localStorage.getItem('graninha_bearer_token');
-            const savedExId = localStorage.getItem('graninha_ex_id');
-
-            if (savedBearerToken) {
-                document.getElementById('bearerToken').value = savedBearerToken;
-            }
-
-            if (savedExId) {
-                document.getElementById('exId').value = savedExId;
-            }
-
-            // Sobrescrever função de iniciar do pix-script.js
-            const originalStartBtn = document.getElementById('startBtn');
-            if (originalStartBtn) {
-                originalStartBtn.addEventListener('click', function(e) {
-                    const bearerToken = document.getElementById('bearerToken').value.trim();
-                    const exId = document.getElementById('exId').value.trim();
-
-                    if (!bearerToken || !exId) {
-                        alert('Por favor, preencha o Bearer Token e o EX ID!');
-                        e.stopPropagation();
-                        return false;
-                    }
-
-                    // Salvar configurações
-                    localStorage.setItem('graninha_bearer_token', bearerToken);
-                    localStorage.setItem('graninha_ex_id', exId);
-
-                    console.log('[GRANINHA BOT] Configurações salvas');
-                    console.log('[GRANINHA BOT] Bearer Token:', bearerToken.substring(0, 20) + '...');
-                    console.log('[GRANINHA BOT] EX ID:', exId);
-                });
-            }
-
-            // Atualizar textos específicos do Graninha
-            const rewardsContainer = document.getElementById('rewardsContainer');
-            if (rewardsContainer) {
-                setTimeout(() => {
-                    rewardsContainer.innerHTML = `
-                        <div class="rewards-grid">
-                            <div class="reward-item">
-                                <span class="reward-icon">🎰</span>
-                                <span class="reward-name">Raspadinhas</span>
-                                <span class="reward-status active">Ativo</span>
-                            </div>
-                            <div class="reward-item">
-                                <span class="reward-icon">🎡</span>
-                                <span class="reward-name">Roleta</span>
-                                <span class="reward-status active">Ativo</span>
-                            </div>
-                            <div class="reward-item">
-                                <span class="reward-icon">❓</span>
-                                <span class="reward-name">Quiz</span>
-                                <span class="reward-status active">Ativo</span>
-                            </div>
-                            <div class="reward-item">
-                                <span class="reward-icon">🎮</span>
-                                <span class="reward-name">33 Jogos</span>
-                                <span class="reward-status active">Ativo</span>
-                            </div>
-                        </div>
-                    `;
-                }, 1000);
-            }
-        });
-    </script>
+    <script src="script_optimized.js"></script>
 </body>
 </html>
