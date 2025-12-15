@@ -658,10 +658,10 @@ async function loopJogos() {
         }
         
         if (botState.running && config.autoLoop) {
-            // Intervalo realista: 5-15 minutos (baseado na análise)
-            const intervaloMinutos = randomRange(5, 15);
+            // Intervalo de verificação: 20 minutos
+            const intervaloMinutos = 20;
             const intervaloMs = intervaloMinutos * 60 * 1000;
-            addLog(`⏳ Aguardando ${intervaloMinutos} minutos até próxima tentativa...`, 'info');
+            addLog(`⏳ Aguardando ${intervaloMinutos} minutos até próxima verificação...`, 'info');
             await sleep(intervaloMs);
         }
     }
