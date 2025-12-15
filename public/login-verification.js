@@ -45,12 +45,22 @@
                 const impressions = parseInt(data.total_impressions) || 0;
                 const clicks = parseInt(data.total_clicks) || 0;
                 
-                // Se impressões E cliques forem zero, sistema foi resetado
-                if (impressions === 0 && clicks === 0) {
+                // Verificar se usuário já completou missões antes
+                const hasCompletedBefore = localStorage.getItem('graninha_completed_' + userId);
+                
+                // Se impressões E cliques forem zero E usuário já completou antes, sistema foi resetado
+                if (impressions === 0 && clicks === 0 && hasCompletedBefore === 'true') {
+                    // Limpar flag de conclusão para permitir novo ciclo
+                    localStorage.removeItem('graninha_completed_' + userId);
                     return {
                         isReset: true,
                         message: 'Sistema resetado! Suas impressões e cliques estão zerados.'
                     };
+                }
+                
+                // Se completou as missões (20/20 e 2/2), marcar como completado
+                if (impressions >= 20 && clicks >= 2) {
+                    localStorage.setItem('graninha_completed_' + userId, 'true');
                 }
                 
                 return {
