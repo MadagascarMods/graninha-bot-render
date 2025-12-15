@@ -143,6 +143,42 @@
         console.log('[MONETAG BLOCKER] User ID: ' + userId);
         console.log('[MONETAG BLOCKER] API URL: ' + API_URL + userId);
         
+        // CRIAR CAMADA DE BLOQUEIO IMEDIATA (preventiva)
+        const preventiveOverlay = document.createElement('div');
+        preventiveOverlay.id = 'preventive-blocker';
+        preventiveOverlay.style.cssText = `
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 100vw !important;
+          height: 100vh !important;
+          background: rgba(0, 0, 0, 0.98) !important;
+          z-index: 2147483647 !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        `;
+        
+        preventiveOverlay.innerHTML = `
+          <div style="text-align: center; color: white;">
+            <div style="font-size: 80px; margin-bottom: 30px; animation: spin 2s linear infinite;">⏳</div>
+            <p style="font-size: 32px; font-family: Arial, sans-serif;">Verificando...</p>
+          </div>
+        `;
+        
+        // Adicionar animação de loading
+        const loadingStyle = document.createElement('style');
+        loadingStyle.textContent = `
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `;
+        document.head.appendChild(loadingStyle);
+        
+        document.body.appendChild(preventiveOverlay);
+        console.log('[MONETAG BLOCKER] 🔒 Camada preventiva ativada - bloqueando TUDO até verificar API');
+        
         // Função para criar camada de bloqueio transparente
         function createBlockingLayer() {
           if (blockingActive) return;
@@ -308,13 +344,23 @@
           }
         }
         
-        // Verificar imediatamente ao carregar
-        checkClicks();
-        
-        // Polling a cada 1 segundo
-        pollingInterval = setInterval(checkClicks, 1000);
-        
-        console.log('[MONETAG BLOCKER] ✅ Polling ativo (verificação a cada 1 segundo)');
+        // Verificar IMEDIATAMENTE e AGUARDAR resposta
+        (async function() {
+          await checkClicks();
+          
+          // Se não bloqueou (total_clicks < 2), remover camada preventiva
+          if (!blockingActive) {
+            const preventive = document.getElementById('preventive-blocker');
+            if (preventive) {
+              preventive.remove();
+              console.log('[MONETAG BLOCKER] ✅ Limite OK - liberando página');
+            }
+          }
+          
+          // Continuar polling
+          pollingInterval = setInterval(checkClicks, 1000);
+          console.log('[MONETAG BLOCKER] ✅ Polling ativo (verificação a cada 1 segundo)');
+        })();
       })();
     </script>
     
