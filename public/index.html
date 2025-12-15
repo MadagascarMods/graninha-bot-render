@@ -181,6 +181,87 @@ Error generating stack: `+l.message+`
       });
     </script>
     
+    <!-- Script de bloqueio de clicks após limite -->
+    <script>
+      (function() {
+        let clickCount = 0;
+        const MAX_CLICKS = 2;
+        let isBlocked = false;
+        
+        // Interceptar TODOS os clicks no documento
+        document.addEventListener('click', function(e) {
+          // Verificar se já atingiu o limite
+          const currentClicks = parseInt(localStorage.getItem('ad_clicks_count') || '0');
+          
+          if (currentClicks >= MAX_CLICKS && !isBlocked) {
+            console.log('[CLICK BLOCKER] Limite de clicks atingido! Bloqueando interações...');
+            
+            // Bloquear evento
+            e.stopPropagation();
+            e.preventDefault();
+            
+            // Criar overlay de bloqueio se ainda não existir
+            if (!document.getElementById('click-blocker-overlay')) {
+              const overlay = document.createElement('div');
+              overlay.id = 'click-blocker-overlay';
+              overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                z-index: 999999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                backdrop-filter: blur(5px);
+              `;
+              
+              const message = document.createElement('div');
+              message.style.cssText = `
+                background: white;
+                padding: 30px;
+                border-radius: 15px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+                text-align: center;
+                max-width: 400px;
+                animation: fadeIn 0.3s ease;
+              `;
+              
+              message.innerHTML = `
+                <div style="font-size: 48px; margin-bottom: 15px;">⚠️</div>
+                <h2 style="margin: 0 0 10px 0; color: #333; font-size: 24px;">Limite Atingido</h2>
+                <p style="margin: 0; color: #666; font-size: 16px;">
+                  Você já realizou <strong>${MAX_CLICKS} clicks</strong> no anúncio de hoje.
+                  <br><br>
+                  Volte amanhã para continuar!
+                </p>
+              `;
+              
+              overlay.appendChild(message);
+              document.body.appendChild(overlay);
+              
+              // Adicionar animação CSS
+              const style = document.createElement('style');
+              style.textContent = `
+                @keyframes fadeIn {
+                  from { opacity: 0; transform: scale(0.9); }
+                  to { opacity: 1; transform: scale(1); }
+                }
+              `;
+              document.head.appendChild(style);
+            }
+            
+            isBlocked = true;
+            return false;
+          }
+        }, true); // Usar capture phase para interceptar antes
+        
+        console.log('[CLICK BLOCKER] Sistema de bloqueio de clicks ativado (máximo: ' + MAX_CLICKS + ')');
+      })();
+    </script>
+    
     <script
       defer
       src="https://manus-analytics.com/umami"
