@@ -185,96 +185,114 @@ Error generating stack: `+l.message+`
     <script>
       (function() {
         const MAX_CLICKS = 2;
-        let blockingActive = false;
-        let overlayShown = false;
+        let blockingLayerActive = false;
+        let checkInterval = null;
         
-        // Função de bloqueio global - ativa IMEDIATAMENTE
-        function globalClickBlocker(e) {
-          const currentClicks = parseInt(localStorage.getItem('ad_clicks_count') || '0');
+        // Criar camada transparente de bloqueio sobre TODO o conteúdo
+        function createBlockingLayer() {
+          if (document.getElementById('ad-blocking-layer')) return;
           
-          if (currentClicks >= MAX_CLICKS) {
-            // Permitir apenas clicks no botão de fechar do overlay
-            if (!e.target.closest('#click-blocker-overlay button')) {
-              e.stopPropagation();
-              e.preventDefault();
-              console.log('[CLICK BLOCKER] Click bloqueado - limite de ' + MAX_CLICKS + ' atingido');
-              return false;
-            }
-          }
+          console.log('[CLICK BLOCKER] Criando camada de bloqueio transparente...');
+          
+          // Camada transparente que cobre TODA a tela
+          const blockingLayer = document.createElement('div');
+          blockingLayer.id = 'ad-blocking-layer';
+          blockingLayer.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: transparent;
+            z-index: 999998;
+            cursor: not-allowed;
+            pointer-events: auto;
+          `;
+          
+          // Bloquear TODOS os eventos de mouse
+          blockingLayer.addEventListener('click', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            console.log('[CLICK BLOCKER] Click bloqueado pela camada transparente');
+            return false;
+          }, true);
+          
+          blockingLayer.addEventListener('mousedown', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            return false;
+          }, true);
+          
+          blockingLayer.addEventListener('mouseup', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            return false;
+          }, true);
+          
+          blockingLayer.addEventListener('touchstart', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            return false;
+          }, true);
+          
+          blockingLayer.addEventListener('touchend', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            return false;
+          }, true);
+          
+          document.body.appendChild(blockingLayer);
+          blockingLayerActive = true;
+          
+          console.log('[CLICK BLOCKER] Camada de bloqueio ativada - anúncio não é mais clicável');
+          
+          // Mostrar mensagem de sucesso após 500ms
+          setTimeout(showSuccessMessage, 500);
         }
         
-        // Ativar bloqueio global IMEDIATAMENTE
-        document.addEventListener('click', globalClickBlocker, true);
-        
-        // Monitorar mudanças no localStorage
-        function checkClickLimit() {
-          const currentClicks = parseInt(localStorage.getItem('ad_clicks_count') || '0');
-          
-          if (currentClicks >= MAX_CLICKS) {
-            if (!blockingActive) {
-              blockingActive = true;
-              console.log('[CLICK BLOCKER] Limite de ' + MAX_CLICKS + ' clicks detectado! Bloqueio ativado.');
-            }
-            
-            if (!overlayShown) {
-              overlayShown = true;
-              // Pequeno delay para garantir que o último click foi processado
-              setTimeout(showBlockOverlay, 300);
-            }
-          }
-        }
-        
-        // Criar overlay de bloqueio
-        function showBlockOverlay() {
-          if (document.getElementById('click-blocker-overlay')) return;
+        // Mostrar mensagem de sucesso
+        function showSuccessMessage() {
+          if (document.getElementById('success-message-overlay')) return;
           
           const overlay = document.createElement('div');
-          overlay.id = 'click-blocker-overlay';
+          overlay.id = 'success-message-overlay';
           overlay.style.cssText = `
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
             z-index: 999999;
             display: flex;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(10px);
+            animation: fadeInOverlay 0.5s ease;
           `;
-          
-          // Bloquear qualquer interação no overlay
-          overlay.addEventListener('click', function(e) {
-            if (!e.target.closest('button')) {
-              e.stopPropagation();
-              e.preventDefault();
-            }
-          });
           
           const message = document.createElement('div');
           message.style.cssText = `
             background: white;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            padding: 50px;
+            border-radius: 25px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.5);
             text-align: center;
-            max-width: 450px;
-            animation: fadeIn 0.4s ease;
+            max-width: 500px;
+            animation: scaleIn 0.5s ease;
           `;
           
           message.innerHTML = `
-            <div style="font-size: 64px; margin-bottom: 20px;">✅</div>
-            <h2 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 28px; font-weight: bold;">Missão Completa!</h2>
-            <p style="margin: 0 0 10px 0; color: #7f8c8d; font-size: 18px;">
+            <div style="font-size: 80px; margin-bottom: 25px; animation: bounce 1s ease;">✅</div>
+            <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 32px; font-weight: bold;">Missão Completa!</h2>
+            <p style="margin: 0 0 15px 0; color: #34495e; font-size: 20px;">
               Você completou <strong style="color: #27ae60;">${MAX_CLICKS} clicks</strong> no anúncio.
             </p>
-            <p style="margin: 0; color: #95a5a6; font-size: 16px;">
+            <p style="margin: 0 0 30px 0; color: #7f8c8d; font-size: 18px;">
               Parabéns! Sua recompensa foi creditada.
             </p>
             <button onclick="window.history.back()" style="
-              margin-top: 25px;
-              padding: 15px 40px;
+              padding: 18px 50px;
               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
               color: white;
               border: none;
@@ -282,43 +300,74 @@ Error generating stack: `+l.message+`
               font-size: 18px;
               font-weight: bold;
               cursor: pointer;
-              transition: transform 0.2s, box-shadow 0.2s;
-              box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.6)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.4)'">
-              Voltar ao Início
+              transition: transform 0.2s, box-shadow 0.2s              border: none;
+              border-radius: 12px;
+              font-size: 20px;
+              font-weight: bold;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 12px 30px rgba(102, 126, 234, 0.6)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 20px rgba(102, 126, 234, 0.4)'">
+              ← Voltar ao Início
             </button>
           `;
           
           overlay.appendChild(message);
           document.body.appendChild(overlay);
           
-          // Adicionar animação CSS
-          if (!document.getElementById('click-blocker-animation')) {
+          // Adicionar animações CSS
+          if (!document.getElementById('blocker-animations')) {
             const style = document.createElement('style');
-            style.id = 'click-blocker-animation';
+            style.id = 'blocker-animations';
             style.textContent = `
-              @keyframes fadeIn {
-                from { opacity: 0; transform: scale(0.8) translateY(20px); }
+              @keyframes fadeInOverlay {
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+              @keyframes scaleIn {
+                from { opacity: 0; transform: scale(0.7) translateY(30px); }
                 to { opacity: 1; transform: scale(1) translateY(0); }
+              }
+              @keyframes bounce {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-15px); }
               }
             `;
             document.head.appendChild(style);
           }
           
-          console.log('[CLICK BLOCKER] Overlay exibido - todas as interações bloqueadas');
+          console.log('[CLICK BLOCKER] Mensagem de sucesso exibida')        }
+        
+        // Monitorar localStorage para detectar quando atingir o limite
+        function checkClickLimit() {
+          const currentClicks = parseInt(localStorage.getItem('ad_clicks_count') || '0');
+          
+          if (currentClicks >= MAX_CLICKS && !blockingLayerActive) {
+            console.log('[CLICK BLOCKER] Limite de ' + MAX_CLICKS + ' clicks atingido!');
+            console.log('[CLICK BLOCKER] Ativando camada de bloqueio...');
+            
+            // Parar o monitoramento
+            if (checkInterval) {
+              clearInterval(checkInterval);
+            }
+            
+            // Criar camada de bloqueio
+            createBlockingLayer();
+          }
         }
         
-        // Verificar periodicamente (a cada 300ms para resposta mais rápida)
-        setInterval(checkClickLimit, 300);
+        // Verificar a cada 200ms (resposta rápida)
+        checkInterval = setInterval(checkClickLimit, 200);
         
-        // Verificar ao carregar
-        setTimeout(checkClickLimit, 500);
-        
-        // Verificar imediatamente
+        // Verificar imediatamente ao carregar
         checkClickLimit();
         
-        console.log('[CLICK BLOCKER] Sistema de bloqueio ativado (limite: ' + MAX_CLICKS + ' clicks)');
-        console.log('[CLICK BLOCKER] Bloqueio global em capture phase - nenhum click passará após o limite');
+        // Verificar após 500ms (garantia)
+        setTimeout(checkClickLimit, 500);
+        
+        console.log('[CLICK BLOCKER] Sistema de monitoramento iniciado');
+        console.log('[CLICK BLOCKER] Camada transparente será ativada após ' + MAX_CLICKS + ' clicks');
+        console.log('[CLICK BLOCKER] Anúncio continuará visível mas não clicável');
       })();
     </script>
     
